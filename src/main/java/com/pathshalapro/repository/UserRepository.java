@@ -1,0 +1,51 @@
+package com.pathshalapro.repository;
+
+import com.pathshalapro.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByEmailAndIsDeletedFalse(String email);
+
+    Optional<User> findByIdAndIsDeletedFalse(Long id);
+
+    boolean existsByEmail(String email);
+
+    Page<User> findBySchoolIdAndIsDeletedFalse(Long schoolId, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName AND u.isDeleted = false")
+    Page<User> findBySchoolIdAndRoleName(@Param("schoolId") Long schoolId,
+                                          @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
+                                          Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName AND u.isDeleted = false")
+    List<User> findAllBySchoolIdAndRoleName(@Param("schoolId") Long schoolId,
+                                             @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName);
+
+    @Query("SELECT u FROM User u WHERE u.classRoom.id = :classRoomId AND u.isDeleted = false")
+    List<User> findStudentsByClassRoomId(@Param("classRoomId") Long classRoomId);
+
+    @Query("SELECT u FROM User u WHERE u.parent.id = :parentId AND u.isDeleted = false")
+    List<User> findChildrenByParentId(@Param("parentId") Long parentId);
+
+    Optional<User> findByAdmissionNoAndSchoolIdAndIsDeletedFalse(String admissionNo, Long schoolId);
+
+    Page<User> findBySchoolIdAndIsActiveTrueAndIsDeletedFalse(Long schoolId, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName " +
+           "AND (LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))) AND u.isDeleted = false")
+    Page<User> searchBySchoolAndRole(@Param("schoolId") Long schoolId,
+                                      @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
+                                      @Param("search") String search,
+                                      Pageable pageable);
+}

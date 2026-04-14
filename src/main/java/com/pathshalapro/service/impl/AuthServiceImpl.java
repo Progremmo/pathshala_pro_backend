@@ -1,0 +1,195 @@
+package com.pathshalapro.service.impl;
+
+import com.pathshalapro.dto.auth.AuthResponse;
+import com.pathshalapro.dto.auth.LoginRequest;
+import com.pathshalapro.dto.auth.RegisterUserRequest;
+import com.pathshalapro.dto.user.UserResponse;
+import com.pathshalapro.entity.Role;
+import com.pathshalapro.entity.School;
+import com.pathshalapro.entity.User;
+import com.pathshalapro.entity.enums.RoleName;
+import com.pathshalapro.exception.ApiException;
+import com.pathshalapro.repository.RoleRepository;
+import com.pathshalapro.repository.SchoolRepository;
+import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.security.JwtTokenProvider;
+import com.pathshalapro.service.AuthService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final SchoolRepository schoolRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
+
+    @Override
+    @Transactional
+    public AuthResponse login(LoginRequest request) {
+        log.info("Login attempt for: {}", request.getEmail());
+
+        // Authenticate via Spring Security
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
+
+        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+                .orElseThrow(() -> ApiException.notFound("User not found."));
+
+        if (!user.isActive()) {
+            throw ApiException.unauthorized("Your account is disabled. Please contact administrator.");
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+
+        Map<String, Object> extraClaims = new java.util.HashMap<>();
+        extraClaims.put("userId", user.getId());
+        extraClaims.put("schoolId", user.getSchool() != null ? user.getSchool().getId() : "");
+        extraClaims.put("roles", user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toList()));
+
+        String accessToken = jwtTokenProvider.generateAccessToken(userDetails, extraClaims);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        log.info("Login successful for: {}", user.getEmail());
+
+        return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse register(RegisterUserRequest request) {
+        log.info("Registering user: {} with role: {}", request.getEmail(), request.getRole());
+
+        // Check email uniqueness
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw ApiException.conflict("Email already registered: " + request.getEmail());
+        }
+
+        // PROJECT_ADMIN doesn't need a school
+        School school = null;
+        if (request.getRole() != RoleName.PROJECT_ADMIN) {
+            if (request.getSchoolId() == null) {
+                throw ApiException.badRequest("School ID is required for role: " + request.getRole());
+            }
+            school = schoolRepository.findByIdAndIsDeletedFalse(request.getSchoolId())
+                    .orElseThrow(() -> ApiException.notFound("School not found with ID: " + request.getSchoolId()));
+        }
+
+        // Get role entity
+        Role role = roleRepository.findByName(request.getRole())
+                .orElseThrow(() -> ApiException.notFound("Role not found: " + request.getRole()));
+
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
+                .school(school)
+                .gender(request.getGender())
+                .dateOfBirth(request.getDateOfBirth())
+                .address(request.getAddress())
+                .admissionNo(request.getAdmissionNo())
+                .employeeId(request.getEmployeeId())
+                .qualification(request.getQualification())
+                .joiningDate(request.getJoiningDate())
+                .isActive(true)
+                .roles(new ArrayList<>(List.of(role)))
+                .build();
+
+        User saved = userRepository.save(user);
+        log.info("User registered successfully: {}", saved.getId());
+
+        return mapToUserResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthResponse refreshToken(String refreshToken) {
+        String email = jwtTokenProvider.extractUsername(refreshToken);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+        if (!jwtTokenProvider.isTokenValid(refreshToken, userDetails)) {
+            throw ApiException.unauthorized("Invalid or expired refresh token.");
+        }
+
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> ApiException.notFound("User not found."));
+
+        String newAccessToken = jwtTokenProvider.generateAccessToken(userDetails);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        return buildAuthResponse(user, newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
+                .orElseThrow(() -> ApiException.notFound("User not found."));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw ApiException.badRequest("Current password is incorrect.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("Password changed for user: {}", userId);
+    }
+
+    // ---- Helpers ----
+
+    private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
+        List<RoleName> roleNames = user.getRoles().stream()
+                .map(r -> r.getName())
+                .collect(Collectors.toList());
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .userId(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFirstName() + " " + user.getLastName())
+                .roles(roleNames)
+                .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
+                .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
+                .expiresIn(86400L)
+                .build();
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .fullName(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .isActive(user.isActive())
+                .roles(user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList()))
+                .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
+                .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+}

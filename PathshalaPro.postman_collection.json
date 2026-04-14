@@ -1,0 +1,395 @@
+{
+  "info": {
+    "name": "PathshalaPro API",
+    "description": "Complete API collection for PathshalaPro SaaS School Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "schoolId", "value": "1" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login (PROJECT_ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "  console.log('Token saved successfully');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@pathshalapro.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register School Admin",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rajesh\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"admin@dps.edu\",\n  \"password\": \"School@123\",\n  \"phone\": \"+91-9876543211\",\n  \"role\": \"SCHOOL_ADMIN\",\n  \"schoolId\": {{schoolId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Teacher",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Priya\",\n  \"lastName\": \"Gupta\",\n  \"email\": \"priya.gupta@dps.edu\",\n  \"password\": \"Teacher@123\",\n  \"phone\": \"+91-9876543212\",\n  \"role\": \"TEACHER\",\n  \"schoolId\": {{schoolId}},\n  \"employeeId\": \"EMP001\",\n  \"qualification\": \"M.Sc Physics\",\n  \"joiningDate\": \"2023-06-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Student",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Arjun\",\n  \"lastName\": \"Kumar\",\n  \"email\": \"arjun.kumar@student.dps.edu\",\n  \"password\": \"Student@123\",\n  \"role\": \"STUDENT\",\n  \"schoolId\": {{schoolId}},\n  \"classRoomId\": 1,\n  \"admissionNo\": \"DPS/2024/001\",\n  \"gender\": \"MALE\",\n  \"dateOfBirth\": \"2010-03-15\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏫 School Management",
+      "item": [
+        {
+          "name": "Create School",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Delhi Public School - Dwarka\",\n  \"code\": \"DPS-DWK-001\",\n  \"address\": \"Sector 10, Dwarka\",\n  \"city\": \"New Delhi\",\n  \"state\": \"Delhi\",\n  \"pincode\": \"110075\",\n  \"phone\": \"+91-11-28041234\",\n  \"email\": \"info@dpsdwarka.edu.in\",\n  \"website\": \"https://dpsdwarka.edu.in\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Schools",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools?page=0&size=10"
+          }
+        },
+        {
+          "name": "Get School by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 Fee Management",
+      "item": [
+        {
+          "name": "Create Fee Structure",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/fees/structures",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tuition Fee - Class 10\",\n  \"feeType\": \"TUITION\",\n  \"amount\": 5000.00,\n  \"frequency\": \"MONTHLY\",\n  \"grade\": \"10\",\n  \"academicYear\": \"2024-25\",\n  \"description\": \"Monthly tuition fee for Class 10 students\",\n  \"dueDay\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Fee Invoice",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/fees/invoices",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 3,\n  \"feeStructureId\": 1,\n  \"dueDate\": \"2024-05-10\",\n  \"totalAmount\": 5000.00,\n  \"discountAmount\": 0,\n  \"fineAmount\": 0,\n  \"periodMonth\": 5,\n  \"periodYear\": 2024,\n  \"academicYear\": \"2024-25\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/fees/payment/create-order",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": 1,\n  \"amount\": 5000.00,\n  \"notes\": \"Payment for May 2024 tuition fee\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/fees/payment/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"order_XXXXXXXXX\",\n  \"razorpayPaymentId\": \"pay_XXXXXXXXXX\",\n  \"razorpaySignature\": \"SIGNATURE_FROM_RAZORPAY_CALLBACK\",\n  \"invoiceId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Fee Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/fees/report/summary?year=2024"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 Timetable",
+      "item": [
+        {
+          "name": "Create Timetable Entry",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/timetable",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayOfWeek\": \"MONDAY\",\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"09:45:00\",\n  \"periodNumber\": 1,\n  \"academicYear\": \"2024-25\",\n  \"classRoomId\": 1,\n  \"subjectId\": 1,\n  \"teacherId\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Class Timetable",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/timetable/class/1?academicYear=2024-25"
+          }
+        },
+        {
+          "name": "Get Teacher Timetable",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/timetable/teacher/2?academicYear=2024-25"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 Exam & Marks",
+      "item": [
+        {
+          "name": "Create Exam",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/exams",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics - Unit Test 1\",\n  \"examType\": \"UNIT_TEST\",\n  \"examDate\": \"2024-05-20\",\n  \"startTime\": \"10:00:00\",\n  \"durationMinutes\": 60,\n  \"totalMarks\": 50.0,\n  \"passingMarks\": 20.0,\n  \"academicYear\": \"2024-25\",\n  \"instructions\": \"Attempt all questions. No calculator allowed.\",\n  \"classRoomId\": 1,\n  \"subjectId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Enter Marks",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/exams/1/marks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 3,\n  \"examId\": 1,\n  \"marksObtained\": 42.5,\n  \"remarks\": \"Excellent performance\",\n  \"isAbsent\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Publish Results",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/exams/1/publish"
+          }
+        },
+        {
+          "name": "Get Student Results",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/exams/student/3/results?classRoomId=1&academicYear=2024-25"
+          }
+        },
+        {
+          "name": "Exam Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/exams/1/statistics"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📍 Attendance",
+      "item": [
+        {
+          "name": "Mark Attendance (Bulk)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/attendance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classRoomId\": 1,\n  \"attendanceDate\": \"2024-04-13\",\n  \"records\": [\n    { \"studentId\": 3, \"status\": \"PRESENT\", \"remarks\": \"\" },\n    { \"studentId\": 4, \"status\": \"ABSENT\", \"remarks\": \"Sick\" },\n    { \"studentId\": 5, \"status\": \"LATE\", \"remarks\": \"15 mins late\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Class Attendance",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/attendance/class/1?date=2024-04-13"
+          }
+        },
+        {
+          "name": "Get Student Attendance Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/attendance/student/3/stats?startDate=2024-04-01&endDate=2024-04-30"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📚 Notes",
+      "item": [
+        {
+          "name": "Upload Notes",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/notes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Chapter 5 - Quadratic Equations\",\n  \"description\": \"Complete notes for quadratic equations with examples\",\n  \"contentUrl\": \"https://drive.google.com/file/d/1abc123/view\",\n  \"contentType\": \"PDF\",\n  \"subjectId\": 1,\n  \"grade\": \"10\",\n  \"academicYear\": \"2024-25\",\n  \"isVisible\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Notes by Subject",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/notes/subject/1?page=0&size=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎥 Online Classes",
+      "item": [
+        {
+          "name": "Schedule Online Class",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/online-classes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mathematics - Quadratic Equations Live Class\",\n  \"description\": \"Live session covering chapter 5 concepts\",\n  \"meetingLink\": \"https://meet.google.com/abc-defg-hij\",\n  \"meetingId\": \"abc-defg-hij\",\n  \"platform\": \"GOOGLE_MEET\",\n  \"scheduledAt\": \"2024-04-15T10:00:00\",\n  \"durationMinutes\": 60,\n  \"classRoomId\": 1,\n  \"subjectId\": 1,\n  \"teacherId\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Upcoming Classes (7 days)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/online-classes/upcoming?days=7"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📩 Communication",
+      "item": [
+        {
+          "name": "Create Announcement",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/communication/announcements",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"School Annual Sports Day\",\n  \"content\": \"Dear students and parents, Annual Sports Day will be held on 25th April 2024. All students must participate.\",\n  \"targetAudience\": \"ALL\",\n  \"isPinned\": true,\n  \"expiresAt\": \"2024-04-26T00:00:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Notification",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/communication/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Fee Payment Reminder\",\n  \"message\": \"Your May fee of ₹5000 is due on 10th May. Please pay on time to avoid late fees.\",\n  \"notificationType\": \"FEE_REMINDER\",\n  \"recipientId\": 3\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/communication/notifications/my?page=0&size=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Reports",
+      "item": [
+        {
+          "name": "Student Performance Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/reports/student/3/performance?classRoomId=1&academicYear=2024-25&startDate=2024-04-01&endDate=2024-04-30"
+          }
+        },
+        {
+          "name": "Fee Collection Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/reports/fees?year=2024"
+          }
+        },
+        {
+          "name": "Class Attendance Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/schools/{{schoolId}}/reports/attendance/class/1?startDate=2024-04-01&endDate=2024-04-30"
+          }
+        }
+      ]
+    }
+  ]
+}
