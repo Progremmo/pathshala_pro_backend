@@ -1,0 +1,48 @@
+# ==========================================
+# PathshalaPro - .dockerignore
+# Excludes files that should not be sent to the Docker build context
+# ==========================================
+
+# Git
+.git/
+.gitignore
+
+# Maven build output (rebuilt inside container)
+target/
+
+# Secrets — never bake into the image
+.env
+.env.*
+!.env.example
+secrets/
+
+# Logs
+logs/
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+out/
+
+# OS generated
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node (if any)
+node_modules/
+
+# Test reports
+test-results/
+surefire-reports/
+
+# Postman collection (not needed in image)
+*.postman_collection.json
+
+# Docs
+README.md
+read.md

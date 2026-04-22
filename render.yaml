@@ -1,12 +1,11 @@
 services:
   - type: web
     name: pathshalapro-api
-    runtime: java
+    runtime: docker
     plan: free
     region: singapore
     branch: main
-    buildCommand: "./mvnw clean package -DskipTests"
-    startCommand: "java -Xmx400m -jar target/pathshalapro-1.0.0.jar"
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/actuator/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
