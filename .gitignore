@@ -1,9 +1,84 @@
-.mvn/
+# ==========================================
+# PathshalaPro - .gitignore
+# ==========================================
+
+# ---- Sensitive Configuration (NEVER commit these) ----
+# NOTE: application*.properties are SAFE to commit - they only contain ${VAR} placeholders.
+# Real secrets go into Render/Railway/etc. environment variable dashboards.
+# Uncommenting below would block Render from seeing the config:
+#src/main/resources/application.properties
+#src/main/resources/application-*.properties
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+.env
+.env.*
+!.env.example
+secrets/
+
+# ---- Maven Build Output ----
 target/
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+!mvnw
+!mvnw.cmd
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ---- Compiled Classes ----
 *.class
-*.log
-logs/
+
+# ---- Package Files ----
 *.jar
 *.war
-!/.mvn/wrapper/maven-wrapper.jar
-src/main/resources/application.properties
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- IDE - IntelliJ IDEA ----
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.idea_modules/
+
+# ---- IDE - Eclipse ----
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# ---- IDE - VS Code ----
+.vscode/
+!.vscode/extensions.json
+
+# ---- OS Generated ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---- Spring Boot Specific ----
+spring-shell.log
+
+# ---- Test Reports ----
+test-results/
+surefire-reports/
+
+# ---- Node (if any frontend tooling) ----
+node_modules/
+npm-debug.log*

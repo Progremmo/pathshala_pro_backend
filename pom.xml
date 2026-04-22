@@ -105,6 +105,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Dotenv - reads .env files for secrets management -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

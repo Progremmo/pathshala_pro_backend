@@ -38,7 +38,7 @@ public class DataSeeder {
     private final PasswordEncoder passwordEncoder;
 
     @Bean
-    @Profile({"default", "dev"})
+    @Profile({"default", "dev", "prod"})
     public CommandLineRunner seedData() {
         return args -> {
             log.info("==== PathshalaPro Data Seeder Starting ====");

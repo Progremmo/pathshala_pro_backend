@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: pathshalapro-api
+    runtime: java
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: "./mvnw clean package -DskipTests"
+    startCommand: "java -Xmx400m -jar target/pathshalapro-1.0.0.jar"
+    healthCheckPath: /api/v1/actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_EXPIRATION_MS
+        value: "86400000"
+      - key: JWT_REFRESH_EXPIRATION_MS
+        value: "604800000"
+      # Secrets — fill these in the Render dashboard manually:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
