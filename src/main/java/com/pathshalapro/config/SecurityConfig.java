@@ -42,8 +42,7 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/api-docs/**",
             "/v3/api-docs/**",
-            "/actuator/health",
-            "/actuator/info"
+            "/actuator/**"   // health + info only (controlled by management.endpoints.web.exposure.include)
     };
 
     @Bean
