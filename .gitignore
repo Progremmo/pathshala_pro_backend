@@ -6,3 +6,4 @@ logs/
 *.jar
 *.war
 !/.mvn/wrapper/maven-wrapper.jar
+src/main/resources/application.properties
