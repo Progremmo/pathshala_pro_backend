@@ -16,13 +16,19 @@ import java.util.List;
 
 /**
  * Swagger / OpenAPI documentation configuration.
- * Access at: http://localhost:8080/api/v1/swagger-ui.html
+ * Access at: <base-url>/api/v1/swagger-ui.html
+ *
+ * The server URL is driven by the {@code app.server-url} property:
+ *   - Dev:  defaults to http://localhost:8080  (no extra config needed)
+ *   - Prod: set APP_SERVER_URL=https://pathshala-pro-backend.onrender.com
+ *           (or your custom domain) in the Render environment variables.
  */
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${server.port:8080}")
-    private String serverPort;
+    /** Injected from app.server-url — resolves differently per profile. */
+    @Value("${app.server-url}")
+    private String serverUrl;
 
     private static final String SECURITY_SCHEME_NAME = "bearerAuth";
 
@@ -31,10 +37,9 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(apiInfo())
                 .servers(List.of(
-                        new Server().url("http://localhost:" + serverPort + "/api/v1")
-                                .description("Local Development Server"),
-                        new Server().url("https://api.pathshalapro.com/api/v1")
-                                .description("Production Server")
+                        new Server()
+                                .url(serverUrl + "/api/v1")
+                                .description("API Server")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                 .components(new Components()

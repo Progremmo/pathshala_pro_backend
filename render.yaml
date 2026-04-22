@@ -14,6 +14,9 @@ services:
         value: "86400000"
       - key: JWT_REFRESH_EXPIRATION_MS
         value: "604800000"
+      # Swagger server URL — set to your Render service URL or custom domain (no trailing slash)
+      - key: APP_SERVER_URL
+        value: "https://pathshala-pro-backend.onrender.com"
       # Secrets — fill these in the Render dashboard manually:
       - key: DB_HOST
         sync: false
