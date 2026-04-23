@@ -52,4 +52,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     Long countTotalDaysByStudent(@Param("studentId") Long studentId,
                                   @Param("startDate") LocalDate startDate,
                                   @Param("endDate") LocalDate endDate);
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.school.id = :schoolId AND a.attendanceDate = :date AND a.status = :status AND a.isDeleted = false")
+    long countBySchoolIdAndDateAndStatus(@Param("schoolId") Long schoolId, @Param("date") LocalDate date, @Param("status") AttendanceStatus status);
+
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.school.id = :schoolId AND a.attendanceDate = :date AND a.isDeleted = false")
+    long countBySchoolIdAndDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
 }

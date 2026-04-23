@@ -65,4 +65,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
                            @Param("schoolId") Long schoolId,
                            @Param("search") String search,
                            Pageable pageable);
+    @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName AND u.isDeleted = false")
+    long countBySchoolIdAndRoleName(@Param("schoolId") Long schoolId, @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName);
 }
