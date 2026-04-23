@@ -5,6 +5,7 @@ import com.pathshalapro.entity.User;
 import com.pathshalapro.entity.enums.RoleName;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,15 +21,17 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
 
     @Override
-    public Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, Pageable pageable) {
-        Page<User> users;
-        if (schoolId != null) {
-            users = userRepository.findBySchoolIdAndRoleName(schoolId, role, pageable);
-        } else {
-            users = userRepository.findAllByRoleName(role, pageable);
+    public Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, String search, Pageable pageable) {
+        // Security check: School Admin can only see users from their own school
+        if (securityUtils.isSchoolAdmin()) {
+            User currentUser = securityUtils.getCurrentUser();
+            schoolId = currentUser.getSchool().getId();
         }
+        
+        Page<User> users = userRepository.searchUsers(role, schoolId, search, pageable);
         return users.map(this::mapToUserResponse);
     }
 

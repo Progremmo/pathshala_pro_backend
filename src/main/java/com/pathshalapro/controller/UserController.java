@@ -27,14 +27,15 @@ public class UserController {
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Get users by role and optional school")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getUsersByRole(
-            @RequestParam RoleName role,
+            @RequestParam(required = false) RoleName role,
             @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
-        Page<UserResponse> users = userService.getUsersByRoleAndSchool(role, schoolId, pageable);
+        Page<UserResponse> users = userService.getUsersByRoleAndSchool(role, schoolId, search, pageable);
         return ResponseEntity.ok(ApiResponse.success(users));
     }
 

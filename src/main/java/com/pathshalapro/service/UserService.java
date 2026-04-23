@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface UserService {
-    Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, Pageable pageable);
+    Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, String search, Pageable pageable);
     UserResponse getUserById(Long id);
     UserResponse toggleStatus(Long id, boolean active);
 }

@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdAndIsDeletedFalse(Long id);
 
     boolean existsByEmail(String email);
+    
+    Page<User> findByIsDeletedFalse(Pageable pageable);
 
     Page<User> findBySchoolIdAndIsDeletedFalse(Long schoolId, Pageable pageable);
 
@@ -52,4 +54,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                       @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
                                       @Param("search") String search,
                                       Pageable pageable);
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE " +
+           "(:roleName IS NULL OR r.name = :roleName) AND " +
+           "(:schoolId IS NULL OR u.school.id = :schoolId) AND " +
+           "(:search IS NULL OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "u.isDeleted = false")
+    Page<User> searchUsers(@Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
+                           @Param("schoolId") Long schoolId,
+                           @Param("search") String search,
+                           Pageable pageable);
 }
