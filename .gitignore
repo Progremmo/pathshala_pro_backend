@@ -82,3 +82,6 @@ surefire-reports/
 # ---- Node (if any frontend tooling) ----
 node_modules/
 npm-debug.log*
+
+# ----Exclude web panel --------------
+pathshalapro-web/

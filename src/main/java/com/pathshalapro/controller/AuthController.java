@@ -4,6 +4,9 @@ import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.auth.AuthResponse;
 import com.pathshalapro.dto.auth.LoginRequest;
 import com.pathshalapro.dto.auth.RegisterUserRequest;
+import com.pathshalapro.dto.auth.RegisterAdminRequest;
+import com.pathshalapro.dto.auth.ForgotPasswordRequest;
+import com.pathshalapro.dto.auth.ResetPasswordRequest;
 import com.pathshalapro.dto.user.UserResponse;
 import com.pathshalapro.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +45,27 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterUserRequest request) {
         UserResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response, "User registered successfully."));
+    }
+
+    @PostMapping("/register-admin")
+    @Operation(summary = "Register a school admin", description = "Registers a school admin, auto-generates a secure password, and emails it.")
+    public ResponseEntity<ApiResponse<UserResponse>> registerAdmin(@Valid @RequestBody RegisterAdminRequest request) {
+        UserResponse response = authService.registerAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response, "Admin registered successfully. Credentials sent via email."));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Forgot password", description = "Generates a 6-digit OTP and sends it to the user's email.")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(null, "If the email is registered, an OTP has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password", description = "Resets the user's password using the OTP.")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Password successfully reset."));
     }
 
     @PostMapping("/refresh")

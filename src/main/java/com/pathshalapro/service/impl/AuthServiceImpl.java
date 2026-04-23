@@ -9,9 +9,17 @@ import com.pathshalapro.entity.School;
 import com.pathshalapro.entity.User;
 import com.pathshalapro.entity.enums.RoleName;
 import com.pathshalapro.exception.ApiException;
+import com.pathshalapro.repository.OtpRepository;
 import com.pathshalapro.repository.RoleRepository;
 import com.pathshalapro.repository.SchoolRepository;
 import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.security.JwtTokenProvider;
+import com.pathshalapro.service.AuthService;
+import com.pathshalapro.service.EmailService;
+import com.pathshalapro.entity.Otp;
+import com.pathshalapro.dto.auth.RegisterAdminRequest;
+import com.pathshalapro.dto.auth.ForgotPasswordRequest;
+import com.pathshalapro.dto.auth.ResetPasswordRequest;
 import com.pathshalapro.security.JwtTokenProvider;
 import com.pathshalapro.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.Random;
+import org.apache.commons.lang3.RandomStringUtils;
 
 @Slf4j
 @Service
@@ -41,6 +52,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final OtpRepository otpRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -139,6 +152,100 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse registerAdmin(RegisterAdminRequest request) {
+        log.info("Registering admin: {} for school: {}", request.getEmail(), request.getSchoolId());
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw ApiException.conflict("Email already registered: " + request.getEmail());
+        }
+
+        School school = schoolRepository.findByIdAndIsDeletedFalse(request.getSchoolId())
+                .orElseThrow(() -> ApiException.notFound("School not found with ID: " + request.getSchoolId()));
+
+        Role role = roleRepository.findByName(RoleName.SCHOOL_ADMIN)
+                .orElseThrow(() -> ApiException.notFound("Role not found: SCHOOL_ADMIN"));
+
+        // Generate an 8-character random password
+        String plainPassword = RandomStringUtils.randomAlphanumeric(8) + "1aA@"; // Ensure complexity
+
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(plainPassword))
+                .phone(request.getPhone())
+                .school(school)
+                .isActive(true)
+                .roles(new ArrayList<>(List.of(role)))
+                .build();
+
+        User saved = userRepository.save(user);
+
+        // Send email
+        String subject = "Welcome to PathshalaPro - Admin Credentials";
+        String body = String.format("Hello %s,\n\nYour School Admin account has been created for %s.\n\nYour login credentials are:\nEmail: %s\nPassword: %s\n\nPlease log in and change your password immediately.\n\nThanks,\nPathshalaPro Team",
+                request.getFirstName(), school.getName(), request.getEmail(), plainPassword);
+        
+        emailService.sendEmail(request.getEmail(), subject, body);
+
+        log.info("School Admin registered successfully: {}", saved.getId());
+        return mapToUserResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+                .orElseThrow(() -> ApiException.notFound("User not found."));
+
+        // Delete any existing OTP for this email
+        otpRepository.deleteByEmail(request.getEmail());
+
+        // Generate 6-digit OTP
+        String otpCode = String.format("%06d", new Random().nextInt(999999));
+        
+        Otp otp = Otp.builder()
+                .email(request.getEmail())
+                .otpCode(otpCode)
+                .expiryDate(LocalDateTime.now().plusMinutes(10))
+                .isUsed(false)
+                .build();
+        
+        otpRepository.save(otp);
+
+        // Send email
+        String subject = "PathshalaPro - Password Reset OTP";
+        String body = String.format("Hello %s,\n\nYour OTP for password reset is: %s\n\nThis OTP will expire in 10 minutes. If you didn't request this, please ignore this email.\n\nThanks,\nPathshalaPro Team",
+                user.getFirstName(), otpCode);
+        
+        emailService.sendEmail(request.getEmail(), subject, body);
+        log.info("Password reset OTP sent to: {}", request.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        Otp otp = otpRepository.findTopByEmailOrderByExpiryDateDesc(request.getEmail())
+                .orElseThrow(() -> ApiException.badRequest("Invalid or expired OTP."));
+
+        if (otp.isUsed() || otp.getExpiryDate().isBefore(LocalDateTime.now()) || !otp.getOtpCode().equals(request.getOtp())) {
+            throw ApiException.badRequest("Invalid or expired OTP.");
+        }
+
+        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+                .orElseThrow(() -> ApiException.notFound("User not found."));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        otp.setUsed(true);
+        otpRepository.save(otp);
+
+        log.info("Password successfully reset for: {}", request.getEmail());
     }
 
     @Override
