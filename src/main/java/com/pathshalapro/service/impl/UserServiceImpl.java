@@ -39,6 +39,15 @@ public class UserServiceImpl implements UserService {
         return mapToUserResponse(user);
     }
 
+    @Override
+    @Transactional
+    public UserResponse toggleStatus(Long id, boolean active) {
+        User user = userRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
+        user.setActive(active);
+        return mapToUserResponse(userRepository.save(user));
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())

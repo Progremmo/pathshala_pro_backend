@@ -44,4 +44,13 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
     }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('PROJECT_ADMIN')")
+    @Operation(summary = "Toggle user active status")
+    public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(
+            @PathVariable Long id,
+            @RequestParam boolean active) {
+        return ResponseEntity.ok(ApiResponse.success(userService.toggleStatus(id, active)));
+    }
 }
