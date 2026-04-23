@@ -55,6 +55,9 @@ public class AuthServiceImpl implements AuthService {
     private final OtpRepository otpRepository;
     private final EmailService emailService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.server-url}")
+    private String serverUrl;
+
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
@@ -132,6 +135,13 @@ public class AuthServiceImpl implements AuthService {
         User saved = userRepository.save(user);
         log.info("User registered successfully: {}", saved.getId());
 
+        // Send confirmation email
+        String loginUrl = serverUrl + "/login";
+        String subject = "Welcome to PathshalaPro - Registration Successful";
+        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), request.getPassword(), loginUrl);
+
+        emailService.sendHtmlEmail(request.getEmail(), subject, htmlBody);
+
         return mapToUserResponse(saved);
     }
 
@@ -186,11 +196,11 @@ public class AuthServiceImpl implements AuthService {
         User saved = userRepository.save(user);
 
         // Send email
+        String loginUrl = serverUrl + "/login";
         String subject = "Welcome to PathshalaPro - Admin Credentials";
-        String body = String.format("Hello %s,\n\nYour School Admin account has been created for %s.\n\nYour login credentials are:\nEmail: %s\nPassword: %s\n\nPlease log in and change your password immediately.\n\nThanks,\nPathshalaPro Team",
-                request.getFirstName(), school.getName(), request.getEmail(), plainPassword);
+        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword, loginUrl);
         
-        emailService.sendEmail(request.getEmail(), subject, body);
+        emailService.sendHtmlEmail(request.getEmail(), subject, htmlBody);
 
         log.info("School Admin registered successfully: {}", saved.getId());
         return mapToUserResponse(saved);
@@ -298,5 +308,50 @@ public class AuthServiceImpl implements AuthService {
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private String getRegistrationHtmlTemplate(String name, String email, String password, String loginUrl) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+                    .header { background: #4f46e5; color: #ffffff; padding: 30px; text-align: center; }
+                    .header h1 { margin: 0; font-size: 24px; }
+                    .content { padding: 30px; background: #ffffff; }
+                    .credentials { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; margin: 20px 0; }
+                    .credentials p { margin: 5px 0; font-family: monospace; font-size: 14px; }
+                    .button-container { text-align: center; margin-top: 30px; }
+                    .button { background: #4f46e5; color: #ffffff !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+                    .footer { background: #f3f4f6; color: #6b7280; padding: 20px; text-align: center; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>PathshalaPro</h1>
+                    </div>
+                    <div class="content">
+                        <h2 style="color: #4f46e5;">Welcome, %s!</h2>
+                        <p>Your account has been successfully created. You can now access the PathshalaPro School Management System.</p>
+                        <div class="credentials">
+                            <p><strong>Email:</strong> %s</p>
+                            <p><strong>Password:</strong> %s</p>
+                        </div>
+                        <p>Please log in and change your password immediately for better security.</p>
+                        <div class="button-container">
+                            <a href="%s" class="button">Login to Your Account</a>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        &copy; 2026 PathshalaPro Team. All rights reserved.<br>
+                        If you have any questions, contact us at support@pathshalapro.com
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(name, email, password, loginUrl);
     }
 }
