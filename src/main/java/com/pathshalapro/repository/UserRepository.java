@@ -27,6 +27,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                           @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
                                           Pageable pageable);
 
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName AND u.isDeleted = false")
+    Page<User> findAllByRoleName(@Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
+                                 Pageable pageable);
+
     @Query("SELECT u FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName AND u.isDeleted = false")
     List<User> findAllBySchoolIdAndRoleName(@Param("schoolId") Long schoolId,
                                              @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName);
