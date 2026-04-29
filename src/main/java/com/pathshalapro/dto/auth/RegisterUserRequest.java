@@ -21,7 +21,7 @@ public class RegisterUserRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "Password is required")
+    // If null, a secure password will be generated and emailed
     @Size(min = 8, max = 60, message = "Password must be between 8 and 60 characters")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",
              message = "Password must contain at least one uppercase, one lowercase, and one digit")

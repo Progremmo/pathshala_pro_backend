@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "notifications", indexes = {
-    @Index(name = "idx_notif_school", columnList = "school_id"),
-    @Index(name = "idx_notif_recipient", columnList = "recipient_id")
+        @Index(name = "idx_notif_school", columnList = "school_id"),
+        @Index(name = "idx_notif_recipient", columnList = "recipient_id")
 })
 @Getter
 @Setter
@@ -37,6 +37,7 @@ public class Notification extends BaseEntity {
     private NotificationType notificationType;
 
     @Column(name = "is_read", nullable = false)
+    @Builder.Default
     private boolean isRead = false;
 
     @Column(name = "read_at")
@@ -49,6 +50,7 @@ public class Notification extends BaseEntity {
     private LocalDateTime sentAt;
 
     @Column(name = "is_sent", nullable = false)
+    @Builder.Default
     private boolean isSent = false;
 
     // Optional: reference to related entity

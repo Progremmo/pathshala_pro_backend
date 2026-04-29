@@ -2,8 +2,8 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.exam.ExamRequest;
+import com.pathshalapro.dto.exam.ExamResponse;
 import com.pathshalapro.dto.exam.MarksEntryRequest;
-import com.pathshalapro.entity.Exam;
 import com.pathshalapro.entity.Marks;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.impl.ExamServiceImpl;
@@ -38,17 +38,17 @@ public class ExamController {
     @PostMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Create exam")
-    public ResponseEntity<ApiResponse<Exam>> createExam(
+    public ResponseEntity<ApiResponse<ExamResponse>> createExam(
             @PathVariable Long schoolId,
             @Valid @RequestBody ExamRequest request) {
-        Exam exam = examService.createExam(schoolId, request);
+        ExamResponse exam = examService.createExam(schoolId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(exam, "Exam created."));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get all exams for a school")
-    public ResponseEntity<ApiResponse<Page<Exam>>> getExams(
+    public ResponseEntity<ApiResponse<Page<ExamResponse>>> getExams(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -71,10 +71,10 @@ public class ExamController {
     @PatchMapping("/{examId}/publish")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Publish exam results")
-    public ResponseEntity<ApiResponse<Exam>> publishResults(
+    public ResponseEntity<ApiResponse<ExamResponse>> publishResults(
             @PathVariable Long schoolId,
             @PathVariable Long examId) {
-        Exam exam = examService.publishResults(schoolId, examId);
+        ExamResponse exam = examService.publishResults(schoolId, examId);
         return ResponseEntity.ok(ApiResponse.success(exam, "Results published successfully."));
     }
 

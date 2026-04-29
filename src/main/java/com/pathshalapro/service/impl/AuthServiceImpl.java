@@ -65,8 +65,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Authenticate via Spring Security
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
                 .orElseThrow(() -> ApiException.notFound("User not found."));
@@ -114,11 +113,17 @@ public class AuthServiceImpl implements AuthService {
         Role role = roleRepository.findByName(request.getRole())
                 .orElseThrow(() -> ApiException.notFound("Role not found: " + request.getRole()));
 
+        // Handle password generation if missing
+        String plainPassword = request.getPassword();
+        if (plainPassword == null || plainPassword.isBlank()) {
+            plainPassword = RandomStringUtils.randomAlphanumeric(8) + "1aA@";
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(plainPassword))
                 .phone(request.getPhone())
                 .school(school)
                 .gender(request.getGender())
@@ -138,7 +143,8 @@ public class AuthServiceImpl implements AuthService {
         // Send confirmation email
         String loginUrl = serverUrl + "/login";
         String subject = "Welcome to PathshalaPro - Registration Successful";
-        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), request.getPassword(), loginUrl);
+        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword,
+                loginUrl);
 
         emailService.sendHtmlEmail(request.getEmail(), subject, htmlBody);
 
@@ -198,8 +204,9 @@ public class AuthServiceImpl implements AuthService {
         // Send email
         String loginUrl = serverUrl + "/login";
         String subject = "Welcome to PathshalaPro - Admin Credentials";
-        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword, loginUrl);
-        
+        String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword,
+                loginUrl);
+
         emailService.sendHtmlEmail(request.getEmail(), subject, htmlBody);
 
         log.info("School Admin registered successfully: {}", saved.getId());
@@ -217,21 +224,22 @@ public class AuthServiceImpl implements AuthService {
 
         // Generate 6-digit OTP
         String otpCode = String.format("%06d", new Random().nextInt(999999));
-        
+
         Otp otp = Otp.builder()
                 .email(request.getEmail())
                 .otpCode(otpCode)
                 .expiryDate(LocalDateTime.now().plusMinutes(10))
                 .isUsed(false)
                 .build();
-        
+
         otpRepository.save(otp);
 
         // Send email
         String subject = "PathshalaPro - Password Reset OTP";
-        String body = String.format("Hello %s,\n\nYour OTP for password reset is: %s\n\nThis OTP will expire in 10 minutes. If you didn't request this, please ignore this email.\n\nThanks,\nPathshalaPro Team",
+        String body = String.format(
+                "Hello %s,\n\nYour OTP for password reset is: %s\n\nThis OTP will expire in 10 minutes. If you didn't request this, please ignore this email.\n\nThanks,\nPathshalaPro Team",
                 user.getFirstName(), otpCode);
-        
+
         emailService.sendEmail(request.getEmail(), subject, body);
         log.info("Password reset OTP sent to: {}", request.getEmail());
     }
@@ -242,7 +250,8 @@ public class AuthServiceImpl implements AuthService {
         Otp otp = otpRepository.findTopByEmailOrderByExpiryDateDesc(request.getEmail())
                 .orElseThrow(() -> ApiException.badRequest("Invalid or expired OTP."));
 
-        if (otp.isUsed() || otp.getExpiryDate().isBefore(LocalDateTime.now()) || !otp.getOtpCode().equals(request.getOtp())) {
+        if (otp.isUsed() || otp.getExpiryDate().isBefore(LocalDateTime.now())
+                || !otp.getOtpCode().equals(request.getOtp())) {
             throw ApiException.badRequest("Invalid or expired OTP.");
         }
 
@@ -312,46 +321,47 @@ public class AuthServiceImpl implements AuthService {
 
     private String getRegistrationHtmlTemplate(String name, String email, String password, String loginUrl) {
         return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-                    .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
-                    .header { background: #4f46e5; color: #ffffff; padding: 30px; text-align: center; }
-                    .header h1 { margin: 0; font-size: 24px; }
-                    .content { padding: 30px; background: #ffffff; }
-                    .credentials { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; margin: 20px 0; }
-                    .credentials p { margin: 5px 0; font-family: monospace; font-size: 14px; }
-                    .button-container { text-align: center; margin-top: 30px; }
-                    .button { background: #4f46e5; color: #ffffff !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; }
-                    .footer { background: #f3f4f6; color: #6b7280; padding: 20px; text-align: center; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>PathshalaPro</h1>
-                    </div>
-                    <div class="content">
-                        <h2 style="color: #4f46e5;">Welcome, %s!</h2>
-                        <p>Your account has been successfully created. You can now access the PathshalaPro School Management System.</p>
-                        <div class="credentials">
-                            <p><strong>Email:</strong> %s</p>
-                            <p><strong>Password:</strong> %s</p>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                        .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+                        .header { background: #4f46e5; color: #ffffff; padding: 30px; text-align: center; }
+                        .header h1 { margin: 0; font-size: 24px; }
+                        .content { padding: 30px; background: #ffffff; }
+                        .credentials { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; margin: 20px 0; }
+                        .credentials p { margin: 5px 0; font-family: monospace; font-size: 14px; }
+                        .button-container { text-align: center; margin-top: 30px; }
+                        .button { background: #4f46e5; color: #ffffff !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+                        .footer { background: #f3f4f6; color: #6b7280; padding: 20px; text-align: center; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>PathshalaPro</h1>
                         </div>
-                        <p>Please log in and change your password immediately for better security.</p>
-                        <div class="button-container">
-                            <a href="%s" class="button">Login to Your Account</a>
+                        <div class="content">
+                            <h2 style="color: #4f46e5;">Welcome, %s!</h2>
+                            <p>Your account has been successfully created. You can now access the PathshalaPro School Management System.</p>
+                            <div class="credentials">
+                                <p><strong>Email:</strong> %s</p>
+                                <p><strong>Password:</strong> %s</p>
+                            </div>
+                            <p>Please log in and change your password immediately for better security.</p>
+                            <div class="button-container">
+                                <a href="%s" class="button">Login to Your Account</a>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            &copy; 2026 PathshalaPro Team. All rights reserved.<br>
+                            If you have any questions, contact us at support@pathshalapro.com
                         </div>
                     </div>
-                    <div class="footer">
-                        &copy; 2026 PathshalaPro Team. All rights reserved.<br>
-                        If you have any questions, contact us at support@pathshalapro.com
-                    </div>
-                </div>
-            </body>
-            </html>
-            """.formatted(name, email, password, loginUrl);
+                </body>
+                </html>
+                """
+                .formatted(name, email, password, loginUrl);
     }
 }

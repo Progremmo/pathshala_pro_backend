@@ -14,6 +14,8 @@ import java.util.Optional;
 @Repository
 public interface ClassRoomRepository extends JpaRepository<ClassRoom, Long> {
 
+    Optional<ClassRoom> findByIdAndIsDeletedFalse(Long id);
+    
     Optional<ClassRoom> findByIdAndSchoolIdAndIsDeletedFalse(Long id, Long schoolId);
 
     List<ClassRoom> findBySchoolIdAndIsDeletedFalse(Long schoolId);

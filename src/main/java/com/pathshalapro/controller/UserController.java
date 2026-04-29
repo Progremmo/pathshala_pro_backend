@@ -46,8 +46,17 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Update user details")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable Long id,
+            @jakarta.validation.Valid @RequestBody com.pathshalapro.dto.user.UserUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(userService.updateUser(id, request)));
+    }
+
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('PROJECT_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Toggle user active status")
     public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(
             @PathVariable Long id,

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,8 +41,8 @@ public interface FeeInvoiceRepository extends JpaRepository<FeeInvoice, Long> {
 
     boolean existsByStudentIdAndFeeStructureIdAndPeriodMonthAndPeriodYearAndIsDeletedFalse(
             Long studentId, Long feeStructureId, Integer month, Integer year);
-    @Query("SELECT SUM(fi.netAmount) FROM FeeInvoice fi WHERE fi.school.id = :schoolId AND fi.paymentStatus = 'PAID' AND fi.isDeleted = false AND fi.paidDate >= :startDate")
-    BigDecimal getCollectionSince(@Param("schoolId") Long schoolId, @Param("startDate") LocalDate startDate);
+    @Query("SELECT SUM(fi.netAmount) FROM FeeInvoice fi WHERE fi.school.id = :schoolId AND fi.paymentStatus = 'PAID' AND fi.isDeleted = false AND fi.updatedAt >= :startDate")
+    BigDecimal getCollectionSince(@Param("schoolId") Long schoolId, @Param("startDate") LocalDateTime startDate);
 
     @Query("SELECT SUM(fi.netAmount - fi.paidAmount) FROM FeeInvoice fi WHERE fi.school.id = :schoolId AND fi.paymentStatus IN ('PENDING', 'PARTIAL') AND fi.isDeleted = false AND fi.dueDate >= :startDate")
     BigDecimal getOutstandingSince(@Param("schoolId") Long schoolId, @Param("startDate") LocalDate startDate);

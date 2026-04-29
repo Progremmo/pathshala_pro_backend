@@ -1,10 +1,13 @@
 package com.pathshalapro.service.impl;
 
+import com.pathshalapro.dto.user.UserUpdateRequest;
 import com.pathshalapro.dto.user.UserResponse;
 import com.pathshalapro.entity.User;
+import com.pathshalapro.entity.ClassRoom;
 import com.pathshalapro.entity.enums.RoleName;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.repository.ClassRoomRepository;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final ClassRoomRepository classRoomRepository;
     private final SecurityUtils securityUtils;
 
     @Override
@@ -40,6 +44,42 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
         return mapToUserResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUser(Long id, UserUpdateRequest request) {
+        User user = userRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
+
+        // Update basic fields
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setGender(request.getGender());
+        user.setDateOfBirth(request.getDateOfBirth());
+        user.setAddress(request.getAddress());
+
+        // Role-specific updates
+        if (request.getClassRoomId() != null) {
+            ClassRoom classRoom = classRoomRepository.findByIdAndIsDeletedFalse(request.getClassRoomId())
+                    .orElseThrow(() -> ApiException.notFound("Classroom not found"));
+            user.setClassRoom(classRoom);
+        }
+
+        if (request.getAdmissionNo() != null) user.setAdmissionNo(request.getAdmissionNo());
+        if (request.getEmployeeId() != null) user.setEmployeeId(request.getEmployeeId());
+        if (request.getQualification() != null) user.setQualification(request.getQualification());
+        if (request.getJoiningDate() != null) user.setJoiningDate(request.getJoiningDate());
+
+        if (request.getParentId() != null) {
+            User parent = userRepository.findByIdAndIsDeletedFalse(request.getParentId())
+                    .orElseThrow(() -> ApiException.notFound("Parent user not found"));
+            user.setParent(parent);
+        }
+
+        return mapToUserResponse(userRepository.save(user));
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.exam.ExamRequest;
+import com.pathshalapro.dto.exam.ExamResponse;
 import com.pathshalapro.dto.exam.MarksEntryRequest;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
@@ -31,7 +32,7 @@ public class ExamServiceImpl {
     private final SchoolRepository schoolRepository;
 
     @Transactional
-    public Exam createExam(Long schoolId, ExamRequest request) {
+    public ExamResponse createExam(Long schoolId, ExamRequest request) {
         if (request.getPassingMarks() > request.getTotalMarks()) {
             throw ApiException.badRequest("Passing marks cannot exceed total marks.");
         }
@@ -63,12 +64,13 @@ public class ExamServiceImpl {
                 .subject(subject)
                 .build();
 
-        return examRepository.save(exam);
+        return mapToResponse(examRepository.save(exam));
     }
 
     @Transactional(readOnly = true)
-    public Page<Exam> getExamsBySchool(Long schoolId, Pageable pageable) {
-        return examRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable);
+    public Page<ExamResponse> getExamsBySchool(Long schoolId, Pageable pageable) {
+        return examRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable)
+                .map(this::mapToResponse);
     }
 
     @Transactional
@@ -111,7 +113,7 @@ public class ExamServiceImpl {
     }
 
     @Transactional
-    public Exam publishResults(Long schoolId, Long examId) {
+    public ExamResponse publishResults(Long schoolId, Long examId) {
         Exam exam = examRepository.findById(examId)
                 .filter(e -> e.getSchool().getId().equals(schoolId) && !e.isDeleted())
                 .orElseThrow(() -> ApiException.notFound("Exam not found."));
@@ -124,7 +126,7 @@ public class ExamServiceImpl {
         }
 
         exam.setResultPublished(true);
-        return examRepository.save(exam);
+        return mapToResponse(examRepository.save(exam));
     }
 
     @Transactional(readOnly = true)
@@ -166,5 +168,24 @@ public class ExamServiceImpl {
         if (percentage >= 50) return "C";
         if (percentage >= 40) return "D";
         return "F";
+    }
+
+    private ExamResponse mapToResponse(Exam exam) {
+        return ExamResponse.builder()
+                .id(exam.getId())
+                .name(exam.getName())
+                .type(exam.getExamType())
+                .examDate(exam.getExamDate())
+                .startTime(exam.getStartTime())
+                .durationMinutes(exam.getDurationMinutes())
+                .totalMarks(exam.getTotalMarks())
+                .passingMarks(exam.getPassingMarks())
+                .academicYear(exam.getAcademicYear())
+                .isPublished(exam.isResultPublished())
+                .classRoomId(exam.getClassRoom().getId())
+                .classRoomName(exam.getClassRoom().getName())
+                .subjectId(exam.getSubject().getId())
+                .subjectName(exam.getSubject().getName())
+                .build();
     }
 }

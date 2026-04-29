@@ -36,7 +36,7 @@ public class DashboardService {
         long totalTeachers = userRepository.countBySchoolIdAndRoleName(schoolId, RoleName.TEACHER);
 
         // Fees
-        BigDecimal monthlyCollection = feeInvoiceRepository.getCollectionSince(schoolId, startOfMonth);
+        BigDecimal monthlyCollection = feeInvoiceRepository.getCollectionSince(schoolId, startOfMonth.atStartOfDay());
         BigDecimal monthlyPending = feeInvoiceRepository.getOutstandingSince(schoolId, startOfMonth);
 
         // Attendance Today
@@ -52,7 +52,7 @@ public class DashboardService {
             LocalDate monthDate = today.minusMonths(i);
             LocalDate start = monthDate.withDayOfMonth(1);
             
-            BigDecimal coll = feeInvoiceRepository.getCollectionSince(schoolId, start);
+            BigDecimal coll = feeInvoiceRepository.getCollectionSince(schoolId, start.atStartOfDay());
             BigDecimal pend = feeInvoiceRepository.getOutstandingSince(schoolId, start);
             
             feeTrend.add(DashboardStatsResponse.FeeTrendData.builder()
