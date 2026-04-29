@@ -2,9 +2,6 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.fee.*;
-import com.pathshalapro.entity.FeeInvoice;
-import com.pathshalapro.entity.FeeStructure;
-import com.pathshalapro.entity.Payment;
 import com.pathshalapro.service.impl.FeeServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -38,17 +34,17 @@ public class FeeController {
     @PostMapping("/structures")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Create fee structure", description = "Define a new fee structure for a class/grade.")
-    public ResponseEntity<ApiResponse<FeeStructure>> createFeeStructure(
+    public ResponseEntity<ApiResponse<FeeStructureResponse>> createFeeStructure(
             @PathVariable Long schoolId,
             @Valid @RequestBody FeeStructureRequest request) {
-        FeeStructure structure = feeService.createFeeStructure(schoolId, request);
+        FeeStructureResponse structure = feeService.createFeeStructure(schoolId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(structure, "Fee structure created."));
     }
 
     @GetMapping("/structures")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Get all fee structures for a school")
-    public ResponseEntity<ApiResponse<Page<FeeStructure>>> getFeeStructures(
+    public ResponseEntity<ApiResponse<Page<FeeStructureResponse>>> getFeeStructures(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -56,22 +52,42 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.success(feeService.getFeeStructures(schoolId, pageable)));
     }
 
+    @PutMapping("/structures/{structureId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Update fee structure")
+    public ResponseEntity<ApiResponse<FeeStructureResponse>> updateFeeStructure(
+            @PathVariable Long schoolId,
+            @PathVariable Long structureId,
+            @Valid @RequestBody FeeStructureRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(feeService.updateFeeStructure(schoolId, structureId, request)));
+    }
+
+    @DeleteMapping("/structures/{structureId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Delete fee structure")
+    public ResponseEntity<ApiResponse<Void>> deleteFeeStructure(
+            @PathVariable Long schoolId,
+            @PathVariable Long structureId) {
+        feeService.deleteFeeStructure(schoolId, structureId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Fee structure deleted."));
+    }
+
     // ---- Fee Invoices ----
 
     @PostMapping("/invoices")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Create fee invoice for a student")
-    public ResponseEntity<ApiResponse<FeeInvoice>> createInvoice(
+    public ResponseEntity<ApiResponse<FeeInvoiceResponse>> createInvoice(
             @PathVariable Long schoolId,
             @Valid @RequestBody FeeInvoiceRequest request) {
-        FeeInvoice invoice = feeService.createInvoice(schoolId, request);
+        FeeInvoiceResponse invoice = feeService.createInvoice(schoolId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(invoice, "Invoice created."));
     }
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Get all invoices for a school")
-    public ResponseEntity<ApiResponse<Page<FeeInvoice>>> getInvoicesBySchool(
+    public ResponseEntity<ApiResponse<Page<FeeInvoiceResponse>>> getInvoicesBySchool(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -79,10 +95,30 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.success(feeService.getInvoicesBySchool(schoolId, pageable)));
     }
 
+    @PutMapping("/invoices/{invoiceId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Update invoice")
+    public ResponseEntity<ApiResponse<FeeInvoiceResponse>> updateInvoice(
+            @PathVariable Long schoolId,
+            @PathVariable Long invoiceId,
+            @Valid @RequestBody FeeInvoiceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(feeService.updateInvoice(schoolId, invoiceId, request)));
+    }
+
+    @DeleteMapping("/invoices/{invoiceId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Delete invoice")
+    public ResponseEntity<ApiResponse<Void>> deleteInvoice(
+            @PathVariable Long schoolId,
+            @PathVariable Long invoiceId) {
+        feeService.deleteInvoice(schoolId, invoiceId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Invoice deleted."));
+    }
+
     @GetMapping("/invoices/student/{studentId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get fee invoices for a specific student")
-    public ResponseEntity<ApiResponse<Page<FeeInvoice>>> getInvoicesByStudent(
+    public ResponseEntity<ApiResponse<Page<FeeInvoiceResponse>>> getInvoicesByStudent(
             @PathVariable Long schoolId,
             @PathVariable Long studentId,
             @RequestParam(defaultValue = "0") int page,
@@ -108,10 +144,10 @@ public class FeeController {
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
     @Operation(summary = "Verify Razorpay payment",
                description = "Step 2: Verify the payment signature from Razorpay callback and update invoice status.")
-    public ResponseEntity<ApiResponse<Payment>> verifyPayment(
+    public ResponseEntity<ApiResponse<PaymentResponse>> verifyPayment(
             @PathVariable Long schoolId,
             @Valid @RequestBody PaymentVerifyRequest request) {
-        Payment payment = feeService.verifyPayment(request);
+        PaymentResponse payment = feeService.verifyPayment(request);
         return ResponseEntity.ok(ApiResponse.success(payment, "Payment verified successfully."));
     }
 

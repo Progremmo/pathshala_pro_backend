@@ -2,7 +2,7 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.attendance.AttendanceRequest;
-import com.pathshalapro.entity.Attendance;
+import com.pathshalapro.dto.attendance.AttendanceResponse;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.impl.AttendanceServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,10 +34,10 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Mark attendance for a class",
                description = "Bulk attendance marking for all students in a class on a given date.")
-    public ResponseEntity<ApiResponse<List<Attendance>>> markAttendance(
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> markAttendance(
             @PathVariable Long schoolId,
             @Valid @RequestBody AttendanceRequest request) {
-        List<Attendance> records = attendanceService.markAttendance(schoolId, request, securityUtils.getCurrentUser());
+        List<AttendanceResponse> records = attendanceService.markAttendance(schoolId, request, securityUtils.getCurrentUser());
         return ResponseEntity.ok(ApiResponse.success(records,
                 String.format("Attendance marked for %d students.", records.size())));
     }
@@ -45,7 +45,7 @@ public class AttendanceController {
     @GetMapping("/class/{classRoomId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Get attendance for a class on a date")
-    public ResponseEntity<ApiResponse<List<Attendance>>> getClassAttendance(
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getClassAttendance(
             @PathVariable Long schoolId,
             @PathVariable Long classRoomId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -56,7 +56,7 @@ public class AttendanceController {
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get attendance records for a student in a date range")
-    public ResponseEntity<ApiResponse<List<Attendance>>> getStudentAttendance(
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getStudentAttendance(
             @PathVariable Long schoolId,
             @PathVariable Long studentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,

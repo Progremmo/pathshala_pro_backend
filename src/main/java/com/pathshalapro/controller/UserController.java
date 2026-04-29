@@ -39,6 +39,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(users));
     }
 
+    @GetMapping("/classroom/{classRoomId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
+    @Operation(summary = "Get all students in a classroom")
+    public ResponseEntity<ApiResponse<java.util.List<UserResponse>>> getStudentsByClass(@PathVariable Long classRoomId) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getStudentsByClass(classRoomId)));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Get user details by ID")

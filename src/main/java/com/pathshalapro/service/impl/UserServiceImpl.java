@@ -83,12 +83,19 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public UserResponse toggleStatus(Long id, boolean active) {
         User user = userRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
         user.setActive(active);
         return mapToUserResponse(userRepository.save(user));
+    }
+
+    @Override
+    public java.util.List<UserResponse> getStudentsByClass(Long classRoomId) {
+        return userRepository.findStudentsByClassRoomId(classRoomId)
+                .stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
     }
 
     private UserResponse mapToUserResponse(User user) {

@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.onlineclass.OnlineClassRequest;
+import com.pathshalapro.dto.onlineclass.OnlineClassResponse;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.*;
@@ -26,7 +27,7 @@ public class OnlineClassServiceImpl {
     private final SchoolRepository schoolRepository;
 
     @Transactional
-    public OnlineClass scheduleClass(Long schoolId, OnlineClassRequest request) {
+    public OnlineClassResponse scheduleClass(Long schoolId, OnlineClassRequest request) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found."));
 
@@ -62,28 +63,29 @@ public class OnlineClassServiceImpl {
                 .teacher(teacher)
                 .build();
 
-        return onlineClassRepository.save(onlineClass);
+        return mapToResponse(onlineClassRepository.save(onlineClass));
     }
 
     @Transactional(readOnly = true)
-    public Page<OnlineClass> getClassesBySchool(Long schoolId, Pageable pageable) {
-        return onlineClassRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable);
+    public Page<OnlineClassResponse> getClassesBySchool(Long schoolId, Pageable pageable) {
+        return onlineClassRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<OnlineClass> getUpcomingClasses(Long schoolId, int days) {
+    public List<OnlineClassResponse> getUpcomingClasses(Long schoolId, int days) {
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime end = start.plusDays(days);
-        return onlineClassRepository.findUpcomingBySchool(schoolId, start, end);
+        return onlineClassRepository.findUpcomingBySchool(schoolId, start, end)
+                .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
-    public OnlineClass updateStatus(Long schoolId, Long classId, String status) {
+    public OnlineClassResponse updateStatus(Long schoolId, Long classId, String status) {
         OnlineClass oc = onlineClassRepository.findById(classId)
                 .filter(c -> c.getSchool().getId().equals(schoolId) && !c.isDeleted())
                 .orElseThrow(() -> ApiException.notFound("Online class not found."));
         oc.setStatus(status);
-        return onlineClassRepository.save(oc);
+        return mapToResponse(onlineClassRepository.save(oc));
     }
 
     @Transactional
@@ -93,5 +95,25 @@ public class OnlineClassServiceImpl {
                 .orElseThrow(() -> ApiException.notFound("Online class not found."));
         oc.setDeleted(true);
         onlineClassRepository.save(oc);
+    }
+
+    private OnlineClassResponse mapToResponse(OnlineClass oc) {
+        return OnlineClassResponse.builder()
+                .id(oc.getId())
+                .topic(oc.getTitle())
+                .description(oc.getDescription())
+                .scheduledAt(oc.getScheduledAt())
+                .durationMinutes(oc.getDurationMinutes())
+                .meetingLink(oc.getMeetingLink())
+                .meetingId(oc.getMeetingId())
+                .meetingPassword(oc.getMeetingPassword())
+                .status(oc.getStatus())
+                .classRoomId(oc.getClassRoom().getId())
+                .classRoomName(oc.getClassRoom().getName())
+                .subjectId(oc.getSubject() != null ? oc.getSubject().getId() : null)
+                .subjectName(oc.getSubject() != null ? oc.getSubject().getName() : "General")
+                .teacherId(oc.getTeacher().getId())
+                .teacherName(oc.getTeacher().getFirstName() + " " + oc.getTeacher().getLastName())
+                .build();
     }
 }

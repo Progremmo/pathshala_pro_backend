@@ -10,4 +10,5 @@ public interface UserService {
     UserResponse getUserById(Long id);
     UserResponse updateUser(Long id, com.pathshalapro.dto.user.UserUpdateRequest request);
     UserResponse toggleStatus(Long id, boolean active);
+    java.util.List<UserResponse> getStudentsByClass(Long classRoomId);
 }

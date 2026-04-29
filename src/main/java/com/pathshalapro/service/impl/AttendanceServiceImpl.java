@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.attendance.AttendanceRequest;
+import com.pathshalapro.dto.attendance.AttendanceResponse;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.entity.enums.AttendanceStatus;
 import com.pathshalapro.exception.ApiException;
@@ -34,7 +35,7 @@ public class AttendanceServiceImpl {
      * Prevents duplicate entries for the same student/date combination.
      */
     @Transactional
-    public List<Attendance> markAttendance(Long schoolId, AttendanceRequest request, User markedBy) {
+    public List<AttendanceResponse> markAttendance(Long schoolId, AttendanceRequest request, User markedBy) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found."));
 
@@ -82,18 +83,19 @@ public class AttendanceServiceImpl {
         log.info("Marked attendance for {} students in class {} on {}",
                 savedRecords.size(), classRoom.getName(), attendanceDate);
 
-        return savedRecords;
+        return savedRecords.stream().map(this::mapToResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Attendance> getClassAttendance(Long schoolId, Long classRoomId, LocalDate date) {
-        return attendanceRepository.findByClassRoomIdAndAttendanceDateAndIsDeletedFalse(classRoomId, date);
+    public List<AttendanceResponse> getClassAttendance(Long schoolId, Long classRoomId, LocalDate date) {
+        return attendanceRepository.findByClassRoomIdAndAttendanceDateAndIsDeletedFalse(classRoomId, date)
+                .stream().map(this::mapToResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Attendance> getStudentAttendance(Long studentId, LocalDate startDate, LocalDate endDate) {
+    public List<AttendanceResponse> getStudentAttendance(Long studentId, LocalDate startDate, LocalDate endDate) {
         return attendanceRepository.findByStudentIdAndAttendanceDateBetweenAndIsDeletedFalse(
-                studentId, startDate, endDate);
+                studentId, startDate, endDate).stream().map(this::mapToResponse).toList();
     }
 
     /**
@@ -118,5 +120,18 @@ public class AttendanceServiceImpl {
                 "late", late,
                 "attendancePercentage", Math.round(percentage * 100.0) / 100.0
         );
+    }
+
+    private AttendanceResponse mapToResponse(Attendance a) {
+        return AttendanceResponse.builder()
+                .id(a.getId())
+                .studentId(a.getStudent().getId())
+                .studentName(a.getStudent().getFirstName() + " " + a.getStudent().getLastName())
+                .classRoomId(a.getClassRoom().getId())
+                .classRoomName(a.getClassRoom().getName())
+                .attendanceDate(a.getAttendanceDate())
+                .status(a.getStatus())
+                .remarks(a.getRemarks())
+                .build();
     }
 }

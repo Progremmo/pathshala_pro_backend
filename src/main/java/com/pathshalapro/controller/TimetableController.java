@@ -2,8 +2,7 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.timetable.TimetableRequest;
-import com.pathshalapro.entity.Timetable;
-import com.pathshalapro.entity.enums.DayOfWeek;
+import com.pathshalapro.dto.timetable.TimetableResponse;
 import com.pathshalapro.service.impl.TimetableServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,17 +29,17 @@ public class TimetableController {
     @PostMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Create timetable entry", description = "Creates a timetable slot. Detects and rejects scheduling conflicts.")
-    public ResponseEntity<ApiResponse<Timetable>> createEntry(
+    public ResponseEntity<ApiResponse<TimetableResponse>> createEntry(
             @PathVariable Long schoolId,
             @Valid @RequestBody TimetableRequest request) {
-        Timetable entry = timetableService.createEntry(schoolId, request);
+        TimetableResponse entry = timetableService.createEntry(schoolId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(entry, "Timetable entry created."));
     }
 
     @PutMapping("/{entryId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Update timetable entry")
-    public ResponseEntity<ApiResponse<Timetable>> updateEntry(
+    public ResponseEntity<ApiResponse<TimetableResponse>> updateEntry(
             @PathVariable Long schoolId,
             @PathVariable Long entryId,
             @Valid @RequestBody TimetableRequest request) {
@@ -50,7 +49,7 @@ public class TimetableController {
     @GetMapping("/class/{classRoomId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get timetable for a classroom")
-    public ResponseEntity<ApiResponse<List<Timetable>>> getClassTimetable(
+    public ResponseEntity<ApiResponse<List<TimetableResponse>>> getClassTimetable(
             @PathVariable Long schoolId,
             @PathVariable Long classRoomId,
             @RequestParam String academicYear) {
@@ -60,7 +59,7 @@ public class TimetableController {
     @GetMapping("/teacher/{teacherId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Get timetable for a teacher")
-    public ResponseEntity<ApiResponse<List<Timetable>>> getTeacherTimetable(
+    public ResponseEntity<ApiResponse<List<TimetableResponse>>> getTeacherTimetable(
             @PathVariable Long schoolId,
             @PathVariable Long teacherId,
             @RequestParam String academicYear) {

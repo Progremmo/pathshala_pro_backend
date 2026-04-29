@@ -45,9 +45,11 @@ public class User extends BaseEntity {
     @Column(name = "profile_pic_url", length = 500)
     private String profilePicUrl;
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Builder.Default
     @Column(name = "is_email_verified", nullable = false)
     private boolean isEmailVerified = false;
 
@@ -87,9 +89,11 @@ public class User extends BaseEntity {
     @JoinColumn(name = "parent_id")
     private User parent;
 
+    @Builder.Default
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private List<User> children = new ArrayList<>();
 
+    @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",

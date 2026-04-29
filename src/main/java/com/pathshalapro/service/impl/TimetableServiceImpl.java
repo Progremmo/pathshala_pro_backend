@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.timetable.TimetableRequest;
+import com.pathshalapro.dto.timetable.TimetableResponse;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.*;
@@ -26,7 +27,7 @@ public class TimetableServiceImpl {
     private final SchoolRepository schoolRepository;
 
     @Transactional
-    public Timetable createEntry(Long schoolId, TimetableRequest request) {
+    public TimetableResponse createEntry(Long schoolId, TimetableRequest request) {
         // Validate time range
         if (!request.getEndTime().isAfter(request.getStartTime())) {
             throw ApiException.badRequest("End time must be after start time.");
@@ -88,11 +89,11 @@ public class TimetableServiceImpl {
         Timetable saved = timetableRepository.save(entry);
         log.info("Timetable entry created: {} for class {} on {}", saved.getId(),
                 classRoom.getName(), request.getDayOfWeek());
-        return saved;
+        return mapToResponse(saved);
     }
 
     @Transactional
-    public Timetable updateEntry(Long schoolId, Long entryId, TimetableRequest request) {
+    public TimetableResponse updateEntry(Long schoolId, Long entryId, TimetableRequest request) {
         Timetable entry = timetableRepository.findById(entryId)
                 .filter(t -> t.getSchool().getId().equals(schoolId) && !t.isDeleted())
                 .orElseThrow(() -> ApiException.notFound("Timetable entry not found."));
@@ -125,17 +126,19 @@ public class TimetableServiceImpl {
         entry.setEndTime(request.getEndTime());
         entry.setPeriodNumber(request.getPeriodNumber());
 
-        return timetableRepository.save(entry);
+        return mapToResponse(timetableRepository.save(entry));
     }
 
     @Transactional(readOnly = true)
-    public List<Timetable> getClassTimetable(Long classRoomId, String academicYear) {
-        return timetableRepository.findByClassRoomIdAndAcademicYearAndIsDeletedFalse(classRoomId, academicYear);
+    public List<TimetableResponse> getClassTimetable(Long classRoomId, String academicYear) {
+        return timetableRepository.findByClassRoomIdAndAcademicYearAndIsDeletedFalse(classRoomId, academicYear)
+                .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<Timetable> getTeacherTimetable(Long teacherId, String academicYear) {
-        return timetableRepository.findByTeacherIdAndAcademicYearAndIsDeletedFalse(teacherId, academicYear);
+    public List<TimetableResponse> getTeacherTimetable(Long teacherId, String academicYear) {
+        return timetableRepository.findByTeacherIdAndAcademicYearAndIsDeletedFalse(teacherId, academicYear)
+                .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
@@ -145,5 +148,23 @@ public class TimetableServiceImpl {
                 .orElseThrow(() -> ApiException.notFound("Timetable entry not found."));
         entry.setDeleted(true);
         timetableRepository.save(entry);
+    }
+
+    private TimetableResponse mapToResponse(Timetable t) {
+        return TimetableResponse.builder()
+                .id(t.getId())
+                .dayOfWeek(t.getDayOfWeek())
+                .startTime(t.getStartTime())
+                .endTime(t.getEndTime())
+                .periodNumber(t.getPeriodNumber())
+                .academicYear(t.getAcademicYear())
+                .classRoomId(t.getClassRoom().getId())
+                .classRoomName(t.getClassRoom().getName())
+                .subjectId(t.getSubject().getId())
+                .subjectName(t.getSubject().getName())
+                .subjectCode(t.getSubject().getCode())
+                .teacherId(t.getTeacher().getId())
+                .teacherName(t.getTeacher().getFirstName() + " " + t.getTeacher().getLastName())
+                .build();
     }
 }

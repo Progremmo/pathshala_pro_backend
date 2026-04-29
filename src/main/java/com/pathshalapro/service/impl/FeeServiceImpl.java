@@ -53,7 +53,7 @@ public class FeeServiceImpl {
     // ---- Fee Structure ----
 
     @Transactional
-    public FeeStructure createFeeStructure(Long schoolId, FeeStructureRequest request) {
+    public FeeStructureResponse createFeeStructure(Long schoolId, FeeStructureRequest request) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found: " + schoolId));
 
@@ -69,18 +69,47 @@ public class FeeServiceImpl {
                 .school(school)
                 .build();
 
-        return feeStructureRepository.save(structure);
+        return mapToStructureResponse(feeStructureRepository.save(structure));
     }
 
     @Transactional(readOnly = true)
-    public Page<FeeStructure> getFeeStructures(Long schoolId, Pageable pageable) {
-        return feeStructureRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable);
+    public Page<FeeStructureResponse> getFeeStructures(Long schoolId, Pageable pageable) {
+        return feeStructureRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable)
+                .map(this::mapToStructureResponse);
+    }
+
+    @Transactional
+    public FeeStructureResponse updateFeeStructure(Long schoolId, Long structureId, FeeStructureRequest request) {
+        FeeStructure structure = feeStructureRepository.findById(structureId)
+                .filter(s -> s.getSchool().getId().equals(schoolId) && !s.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Fee structure not found."));
+
+        structure.setName(request.getName());
+        structure.setFeeType(request.getFeeType());
+        structure.setAmount(request.getAmount());
+        structure.setFrequency(request.getFrequency());
+        structure.setGrade(request.getGrade());
+        structure.setAcademicYear(request.getAcademicYear());
+        structure.setDescription(request.getDescription());
+        structure.setDueDay(request.getDueDay());
+
+        return mapToStructureResponse(feeStructureRepository.save(structure));
+    }
+
+    @Transactional
+    public void deleteFeeStructure(Long schoolId, Long structureId) {
+        FeeStructure structure = feeStructureRepository.findById(structureId)
+                .filter(s -> s.getSchool().getId().equals(schoolId) && !s.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Fee structure not found."));
+
+        structure.setDeleted(true);
+        feeStructureRepository.save(structure);
     }
 
     // ---- Fee Invoice ----
 
     @Transactional
-    public FeeInvoice createInvoice(Long schoolId, FeeInvoiceRequest request) {
+    public FeeInvoiceResponse createInvoice(Long schoolId, FeeInvoiceRequest request) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found."));
 
@@ -125,17 +154,51 @@ public class FeeServiceImpl {
                 .feeStructure(structure)
                 .build();
 
-        return feeInvoiceRepository.save(invoice);
+        return mapToResponse(feeInvoiceRepository.save(invoice));
     }
 
     @Transactional(readOnly = true)
-    public Page<FeeInvoice> getInvoicesBySchool(Long schoolId, Pageable pageable) {
-        return feeInvoiceRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable);
+    public Page<FeeInvoiceResponse> getInvoicesBySchool(Long schoolId, Pageable pageable) {
+        return feeInvoiceRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public Page<FeeInvoice> getInvoicesByStudent(Long studentId, Pageable pageable) {
-        return feeInvoiceRepository.findByStudentIdAndIsDeletedFalse(studentId, pageable);
+    public Page<FeeInvoiceResponse> getInvoicesByStudent(Long studentId, Pageable pageable) {
+        return feeInvoiceRepository.findByStudentIdAndIsDeletedFalse(studentId, pageable).map(this::mapToResponse);
+    }
+
+    @Transactional
+    public FeeInvoiceResponse updateInvoice(Long schoolId, Long invoiceId, FeeInvoiceRequest request) {
+        FeeInvoice invoice = feeInvoiceRepository.findById(invoiceId)
+                .filter(i -> i.getSchool().getId().equals(schoolId) && !i.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Invoice not found."));
+
+        if (invoice.getPaymentStatus() == PaymentStatus.PAID) {
+            throw ApiException.badRequest("Cannot update a paid invoice.");
+        }
+
+        invoice.setTotalAmount(request.getTotalAmount());
+        invoice.setDiscountAmount(request.getDiscountAmount());
+        invoice.setFineAmount(request.getFineAmount());
+        invoice.setNetAmount(request.getTotalAmount().subtract(request.getDiscountAmount()).add(request.getFineAmount()));
+        invoice.setDueDate(request.getDueDate());
+        invoice.setRemarks(request.getRemarks());
+
+        return mapToResponse(feeInvoiceRepository.save(invoice));
+    }
+
+    @Transactional
+    public void deleteInvoice(Long schoolId, Long invoiceId) {
+        FeeInvoice invoice = feeInvoiceRepository.findById(invoiceId)
+                .filter(i -> i.getSchool().getId().equals(schoolId) && !i.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Invoice not found."));
+
+        if (invoice.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw ApiException.badRequest("Only pending invoices can be deleted.");
+        }
+
+        invoice.setDeleted(true);
+        feeInvoiceRepository.save(invoice);
     }
 
     // ---- Razorpay Integration ----
@@ -206,26 +269,20 @@ public class FeeServiceImpl {
      * Step 2: Verify Razorpay payment signature and update payment status.
      */
     @Transactional
-    public Payment verifyPayment(PaymentVerifyRequest request) {
-        Payment payment = paymentRepository
-                .findByRazorpayOrderIdAndIsDeletedFalse(request.getRazorpayOrderId())
-                .orElseThrow(() -> ApiException.notFound("Payment record not found for order: " + request.getRazorpayOrderId()));
+    public PaymentResponse verifyPayment(PaymentVerifyRequest request) {
+        // Find existing payment attempt
+        Payment payment = paymentRepository.findByRazorpayOrderIdAndIsDeletedFalse(request.getRazorpayOrderId())
+                .orElseThrow(() -> ApiException.notFound("Payment order not found."));
 
-        // Verify HMAC SHA256 signature
-        boolean isValid = verifySignature(
-                request.getRazorpayOrderId(),
-                request.getRazorpayPaymentId(),
-                request.getRazorpaySignature()
-        );
-
-        if (!isValid) {
+        // Verify signature
+        if (!verifySignature(request.getRazorpayOrderId(), request.getRazorpayPaymentId(), request.getRazorpaySignature())) {
             payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason("Invalid payment signature.");
+            payment.setFailureReason("Invalid signature");
             paymentRepository.save(payment);
             throw ApiException.badRequest("Payment verification failed: Invalid signature.");
         }
 
-        // Update payment record
+        // Update payment
         payment.setRazorpayPaymentId(request.getRazorpayPaymentId());
         payment.setRazorpaySignature(request.getRazorpaySignature());
         payment.setStatus(PaymentStatus.PAID);
@@ -234,20 +291,11 @@ public class FeeServiceImpl {
 
         // Update invoice
         FeeInvoice invoice = payment.getFeeInvoice();
-        BigDecimal totalPaid = invoice.getPaidAmount().add(payment.getAmount());
-        invoice.setPaidAmount(totalPaid);
-
-        if (totalPaid.compareTo(invoice.getNetAmount()) >= 0) {
-            invoice.setPaymentStatus(PaymentStatus.PAID);
-        } else {
-            invoice.setPaymentStatus(PaymentStatus.PARTIAL);
-        }
+        invoice.setPaidAmount(invoice.getNetAmount()); // Full payment for now
+        invoice.setPaymentStatus(PaymentStatus.PAID);
         feeInvoiceRepository.save(invoice);
 
-        log.info("Payment verified successfully. Order: {}, Payment: {}",
-                request.getRazorpayOrderId(), request.getRazorpayPaymentId());
-
-        return payment;
+        return mapToPaymentResponse(payment);
     }
 
     /**
@@ -285,5 +333,63 @@ public class FeeServiceImpl {
     private String generateInvoiceNumber(Long schoolId) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         return String.format("INV-%d-%s-%04d", schoolId, timestamp, invoiceCounter.getAndIncrement());
+    }
+
+    private FeeStructureResponse mapToStructureResponse(FeeStructure s) {
+        return FeeStructureResponse.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .feeType(s.getFeeType())
+                .amount(s.getAmount())
+                .frequency(s.getFrequency())
+                .grade(s.getGrade())
+                .academicYear(s.getAcademicYear())
+                .description(s.getDescription())
+                .dueDay(s.getDueDay())
+                .createdAt(s.getCreatedAt())
+                .updatedAt(s.getUpdatedAt())
+                .build();
+    }
+
+    private PaymentResponse mapToPaymentResponse(Payment p) {
+        return PaymentResponse.builder()
+                .id(p.getId())
+                .amount(p.getAmount())
+                .currency(p.getCurrency())
+                .status(p.getStatus())
+                .razorpayOrderId(p.getRazorpayOrderId())
+                .razorpayPaymentId(p.getRazorpayPaymentId())
+                .paymentMethod(p.getPaymentMethod())
+                .paymentDate(p.getPaymentDate())
+                .receiptNumber(p.getReceiptNumber())
+                .notes(p.getNotes())
+                .invoiceId(p.getFeeInvoice().getId())
+                .paidById(p.getPaidBy().getId())
+                .paidByName(p.getPaidBy().getFirstName() + " " + p.getPaidBy().getLastName())
+                .build();
+    }
+
+    private FeeInvoiceResponse mapToResponse(FeeInvoice i) {
+        return FeeInvoiceResponse.builder()
+                .id(i.getId())
+                .invoiceNumber(i.getInvoiceNumber())
+                .totalAmount(i.getTotalAmount())
+                .discountAmount(i.getDiscountAmount())
+                .fineAmount(i.getFineAmount())
+                .netAmount(i.getNetAmount())
+                .paidAmount(i.getPaidAmount())
+                .paymentStatus(i.getPaymentStatus())
+                .dueDate(i.getDueDate())
+                .periodMonth(i.getPeriodMonth())
+                .periodYear(i.getPeriodYear())
+                .academicYear(i.getAcademicYear())
+                .remarks(i.getRemarks())
+                .studentId(i.getStudent().getId())
+                .studentName(i.getStudent().getFirstName() + " " + i.getStudent().getLastName())
+                .admissionNumber(i.getStudent().getAdmissionNo())
+                .feeStructureId(i.getFeeStructure().getId())
+                .feeStructureName(i.getFeeStructure().getName())
+                .createdAt(i.getCreatedAt())
+                .build();
     }
 }

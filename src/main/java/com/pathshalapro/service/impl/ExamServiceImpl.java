@@ -3,6 +3,7 @@ package com.pathshalapro.service.impl;
 import com.pathshalapro.dto.exam.ExamRequest;
 import com.pathshalapro.dto.exam.ExamResponse;
 import com.pathshalapro.dto.exam.MarksEntryRequest;
+import com.pathshalapro.dto.exam.MarksResponse;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.*;
@@ -74,7 +75,58 @@ public class ExamServiceImpl {
     }
 
     @Transactional
-    public Marks enterMarks(Long schoolId, MarksEntryRequest request, User enteredBy) {
+    public ExamResponse updateExam(Long schoolId, Long examId, ExamRequest request) {
+        Exam exam = examRepository.findById(examId)
+                .filter(e -> e.getSchool().getId().equals(schoolId) && !e.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Exam not found."));
+
+        if (exam.isResultPublished()) {
+            throw ApiException.badRequest("Cannot update an exam whose results are already published.");
+        }
+
+        if (request.getPassingMarks() > request.getTotalMarks()) {
+            throw ApiException.badRequest("Passing marks cannot exceed total marks.");
+        }
+
+        ClassRoom classRoom = classRoomRepository.findByIdAndSchoolIdAndIsDeletedFalse(
+                request.getClassRoomId(), schoolId)
+                .orElseThrow(() -> ApiException.notFound("Classroom not found."));
+
+        Subject subject = subjectRepository.findByIdAndSchoolIdAndIsDeletedFalse(
+                request.getSubjectId(), schoolId)
+                .orElseThrow(() -> ApiException.notFound("Subject not found."));
+
+        exam.setName(request.getName());
+        exam.setExamType(request.getExamType());
+        exam.setExamDate(request.getExamDate());
+        exam.setStartTime(request.getStartTime());
+        exam.setDurationMinutes(request.getDurationMinutes());
+        exam.setTotalMarks(request.getTotalMarks());
+        exam.setPassingMarks(request.getPassingMarks());
+        exam.setAcademicYear(request.getAcademicYear());
+        exam.setInstructions(request.getInstructions());
+        exam.setClassRoom(classRoom);
+        exam.setSubject(subject);
+
+        return mapToResponse(examRepository.save(exam));
+    }
+
+    @Transactional
+    public void deleteExam(Long schoolId, Long examId) {
+        Exam exam = examRepository.findById(examId)
+                .filter(e -> e.getSchool().getId().equals(schoolId) && !e.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Exam not found."));
+
+        if (exam.isResultPublished()) {
+            throw ApiException.badRequest("Cannot delete an exam whose results are already published.");
+        }
+
+        exam.setDeleted(true);
+        examRepository.save(exam);
+    }
+
+    @Transactional
+    public MarksResponse enterMarks(Long schoolId, MarksEntryRequest request, User enteredBy) {
         Exam exam = examRepository.findById(request.getExamId())
                 .filter(e -> e.getSchool().getId().equals(schoolId) && !e.isDeleted())
                 .orElseThrow(() -> ApiException.notFound("Exam not found."));
@@ -109,7 +161,7 @@ public class ExamServiceImpl {
         marks.setRemarks(request.getRemarks());
         marks.setEnteredBy(enteredBy);
 
-        return marksRepository.save(marks);
+        return mapToMarksResponse(marksRepository.save(marks));
     }
 
     @Transactional
@@ -130,8 +182,9 @@ public class ExamServiceImpl {
     }
 
     @Transactional(readOnly = true)
-    public List<Marks> getStudentResults(Long studentId, Long classRoomId, String academicYear) {
-        return marksRepository.findStudentResultsByClassAndYear(studentId, classRoomId, academicYear);
+    public List<MarksResponse> getStudentResults(Long studentId, Long classRoomId, String academicYear) {
+        return marksRepository.findStudentResultsByClassAndYear(studentId, classRoomId, academicYear)
+                .stream().map(this::mapToMarksResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -186,6 +239,19 @@ public class ExamServiceImpl {
                 .classRoomName(exam.getClassRoom().getName())
                 .subjectId(exam.getSubject().getId())
                 .subjectName(exam.getSubject().getName())
+                .build();
+    }
+
+    private MarksResponse mapToMarksResponse(Marks m) {
+        return MarksResponse.builder()
+                .id(m.getId())
+                .studentId(m.getStudent().getId())
+                .studentName(m.getStudent().getFirstName() + " " + m.getStudent().getLastName())
+                .examId(m.getExam().getId())
+                .examName(m.getExam().getName())
+                .marksObtained(m.getMarksObtained())
+                .remarks(m.getRemarks())
+                .isAbsent(m.isAbsent())
                 .build();
     }
 }

@@ -2,8 +2,8 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.notification.AnnouncementRequest;
+import com.pathshalapro.dto.notification.AnnouncementResponse;
 import com.pathshalapro.dto.notification.NotificationRequest;
-import com.pathshalapro.entity.Announcement;
 import com.pathshalapro.entity.Notification;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.impl.NotificationServiceImpl;
@@ -89,22 +89,42 @@ public class NotificationController {
     @PostMapping("/announcements")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Create a school-wide announcement")
-    public ResponseEntity<ApiResponse<Announcement>> createAnnouncement(
+    public ResponseEntity<ApiResponse<AnnouncementResponse>> createAnnouncement(
             @PathVariable Long schoolId,
             @Valid @RequestBody AnnouncementRequest request) {
-        Announcement announcement = notificationService.createAnnouncement(schoolId, request, securityUtils.getCurrentUser());
+        AnnouncementResponse announcement = notificationService.createAnnouncement(schoolId, request, securityUtils.getCurrentUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(announcement, "Announcement created."));
+    }
+
+    @PutMapping("/announcements/{announcementId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Update an announcement")
+    public ResponseEntity<ApiResponse<AnnouncementResponse>> updateAnnouncement(
+            @PathVariable Long schoolId,
+            @PathVariable Long announcementId,
+            @Valid @RequestBody AnnouncementRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(notificationService.updateAnnouncement(schoolId, announcementId, request)));
+    }
+
+    @DeleteMapping("/announcements/{announcementId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Delete an announcement")
+    public ResponseEntity<ApiResponse<Void>> deleteAnnouncement(
+            @PathVariable Long schoolId,
+            @PathVariable Long announcementId) {
+        notificationService.deleteAnnouncement(schoolId, announcementId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Announcement deleted."));
     }
 
     @GetMapping("/announcements")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get active announcements for current user's role")
-    public ResponseEntity<ApiResponse<Page<Announcement>>> getAnnouncements(
+    public ResponseEntity<ApiResponse<Page<AnnouncementResponse>>> getAnnouncements(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "ALL") String audience,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "isPinned", "createdAt"));
         return ResponseEntity.ok(ApiResponse.success(
                 notificationService.getAnnouncementsBySchool(schoolId, audience, pageable)));
     }

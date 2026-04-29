@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.notes.NotesRequest;
+import com.pathshalapro.dto.notes.NotesResponse;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.*;
@@ -21,7 +22,7 @@ public class NotesServiceImpl {
     private final SchoolRepository schoolRepository;
 
     @Transactional
-    public Notes createNotes(Long schoolId, NotesRequest request, User uploadedBy) {
+    public NotesResponse createNotes(Long schoolId, NotesRequest request, User uploadedBy) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found."));
 
@@ -41,21 +42,21 @@ public class NotesServiceImpl {
                 .uploadedBy(uploadedBy)
                 .build();
 
-        return notesRepository.save(notes);
+        return mapToResponse(notesRepository.save(notes));
     }
 
     @Transactional(readOnly = true)
-    public Page<Notes> getNotesBySchool(Long schoolId, Pageable pageable) {
-        return notesRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable);
+    public Page<NotesResponse> getNotesBySchool(Long schoolId, Pageable pageable) {
+        return notesRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public Page<Notes> getNotesBySubject(Long subjectId, Long schoolId, Pageable pageable) {
-        return notesRepository.findBySubjectIdAndSchoolIdAndIsDeletedFalse(subjectId, schoolId, pageable);
+    public Page<NotesResponse> getNotesBySubject(Long subjectId, Long schoolId, Pageable pageable) {
+        return notesRepository.findBySubjectIdAndSchoolIdAndIsDeletedFalse(subjectId, schoolId, pageable).map(this::mapToResponse);
     }
 
     @Transactional
-    public Notes updateNotes(Long noteId, Long schoolId, NotesRequest request) {
+    public NotesResponse updateNotes(Long noteId, Long schoolId, NotesRequest request) {
         Notes notes = notesRepository.findById(noteId)
                 .filter(n -> n.getSchool().getId().equals(schoolId) && !n.isDeleted())
                 .orElseThrow(() -> ApiException.notFound("Notes not found."));
@@ -67,7 +68,7 @@ public class NotesServiceImpl {
         notes.setGrade(request.getGrade());
         notes.setVisible(request.isVisible());
 
-        return notesRepository.save(notes);
+        return mapToResponse(notesRepository.save(notes));
     }
 
     @Transactional
@@ -77,5 +78,23 @@ public class NotesServiceImpl {
                 .orElseThrow(() -> ApiException.notFound("Notes not found."));
         notes.setDeleted(true);
         notesRepository.save(notes);
+    }
+
+    private NotesResponse mapToResponse(Notes n) {
+        return NotesResponse.builder()
+                .id(n.getId())
+                .title(n.getTitle())
+                .description(n.getDescription())
+                .contentUrl(n.getContentUrl())
+                .contentType(n.getContentType())
+                .grade(n.getGrade())
+                .academicYear(n.getAcademicYear())
+                .isVisible(n.isVisible())
+                .subjectId(n.getSubject().getId())
+                .subjectName(n.getSubject().getName())
+                .uploadedById(n.getUploadedBy().getId())
+                .uploadedByName(n.getUploadedBy().getFirstName() + " " + n.getUploadedBy().getLastName())
+                .createdAt(n.getCreatedAt())
+                .build();
     }
 }

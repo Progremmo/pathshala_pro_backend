@@ -4,7 +4,7 @@ import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.exam.ExamRequest;
 import com.pathshalapro.dto.exam.ExamResponse;
 import com.pathshalapro.dto.exam.MarksEntryRequest;
-import com.pathshalapro.entity.Marks;
+import com.pathshalapro.dto.exam.MarksResponse;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.impl.ExamServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,15 +56,35 @@ public class ExamController {
         return ResponseEntity.ok(ApiResponse.success(examService.getExamsBySchool(schoolId, pageable)));
     }
 
+    @PutMapping("/{examId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Update exam")
+    public ResponseEntity<ApiResponse<ExamResponse>> updateExam(
+            @PathVariable Long schoolId,
+            @PathVariable Long examId,
+            @Valid @RequestBody ExamRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(examService.updateExam(schoolId, examId, request)));
+    }
+
+    @DeleteMapping("/{examId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Delete exam")
+    public ResponseEntity<ApiResponse<Void>> deleteExam(
+            @PathVariable Long schoolId,
+            @PathVariable Long examId) {
+        examService.deleteExam(schoolId, examId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Exam deleted."));
+    }
+
     @PostMapping("/{examId}/marks")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Enter marks for a student")
-    public ResponseEntity<ApiResponse<Marks>> enterMarks(
+    public ResponseEntity<ApiResponse<MarksResponse>> enterMarks(
             @PathVariable Long schoolId,
             @PathVariable Long examId,
             @Valid @RequestBody MarksEntryRequest request) {
         request.setExamId(examId);
-        Marks marks = examService.enterMarks(schoolId, request, securityUtils.getCurrentUser());
+        MarksResponse marks = examService.enterMarks(schoolId, request, securityUtils.getCurrentUser());
         return ResponseEntity.ok(ApiResponse.success(marks, "Marks entered successfully."));
     }
 
@@ -81,7 +101,7 @@ public class ExamController {
     @GetMapping("/student/{studentId}/results")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get student exam results")
-    public ResponseEntity<ApiResponse<List<Marks>>> getStudentResults(
+    public ResponseEntity<ApiResponse<List<MarksResponse>>> getStudentResults(
             @PathVariable Long schoolId,
             @PathVariable Long studentId,
             @RequestParam Long classRoomId,

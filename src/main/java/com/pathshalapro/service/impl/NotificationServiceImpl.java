@@ -1,6 +1,7 @@
 package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.notification.AnnouncementRequest;
+import com.pathshalapro.dto.notification.AnnouncementResponse;
 import com.pathshalapro.dto.notification.NotificationRequest;
 import com.pathshalapro.entity.*;
 import com.pathshalapro.exception.ApiException;
@@ -86,7 +87,7 @@ public class NotificationServiceImpl {
     // ---- Announcements ----
 
     @Transactional
-    public Announcement createAnnouncement(Long schoolId, AnnouncementRequest request, User createdBy) {
+    public AnnouncementResponse createAnnouncement(Long schoolId, AnnouncementRequest request, User createdBy) {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found."));
 
@@ -103,12 +104,55 @@ public class NotificationServiceImpl {
                 .createdByUser(createdBy)
                 .build();
 
-        return announcementRepository.save(announcement);
+        return mapToAnnouncementResponse(announcementRepository.save(announcement));
+    }
+
+    @Transactional
+    public AnnouncementResponse updateAnnouncement(Long schoolId, Long announcementId, AnnouncementRequest request) {
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .filter(a -> a.getSchool().getId().equals(schoolId) && !a.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Announcement not found."));
+
+        announcement.setTitle(request.getTitle());
+        announcement.setContent(request.getContent());
+        announcement.setTargetAudience(request.getTargetAudience());
+        announcement.setTargetGrade(request.getTargetGrade());
+        announcement.setPinned(request.isPinned());
+        announcement.setExpiresAt(request.getExpiresAt());
+        announcement.setAttachmentUrl(request.getAttachmentUrl());
+
+        return mapToAnnouncementResponse(announcementRepository.save(announcement));
+    }
+
+    @Transactional
+    public void deleteAnnouncement(Long schoolId, Long announcementId) {
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .filter(a -> a.getSchool().getId().equals(schoolId) && !a.isDeleted())
+                .orElseThrow(() -> ApiException.notFound("Announcement not found."));
+        announcement.setDeleted(true);
+        announcementRepository.save(announcement);
     }
 
     @Transactional(readOnly = true)
-    public Page<Announcement> getAnnouncementsBySchool(Long schoolId, String audience, Pageable pageable) {
+    public Page<AnnouncementResponse> getAnnouncementsBySchool(Long schoolId, String audience, Pageable pageable) {
         return announcementRepository.findActiveBySchoolAndAudience(
-                schoolId, audience, LocalDateTime.now(), pageable);
+                schoolId, audience, LocalDateTime.now(), pageable).map(this::mapToAnnouncementResponse);
+    }
+
+    private AnnouncementResponse mapToAnnouncementResponse(Announcement a) {
+        return AnnouncementResponse.builder()
+                .id(a.getId())
+                .title(a.getTitle())
+                .content(a.getContent())
+                .targetAudience(a.getTargetAudience())
+                .targetGrade(a.getTargetGrade())
+                .isPinned(a.isPinned())
+                .publishedAt(a.getPublishedAt())
+                .expiresAt(a.getExpiresAt())
+                .attachmentUrl(a.getAttachmentUrl())
+                .createdByUserId(a.getCreatedByUser().getId())
+                .createdByUserName(a.getCreatedByUser().getFirstName() + " " + a.getCreatedByUser().getLastName())
+                .createdAt(a.getCreatedAt())
+                .build();
     }
 }

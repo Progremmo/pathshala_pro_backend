@@ -54,17 +54,21 @@ public class School extends BaseEntity {
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_status", nullable = false, length = 30)
     private SubscriptionStatus subscriptionStatus = SubscriptionStatus.TRIAL;
 
     // Relationships
+    @Builder.Default
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ClassRoom> classRooms = new ArrayList<>();
 

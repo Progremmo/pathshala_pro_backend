@@ -2,7 +2,7 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.notes.NotesRequest;
-import com.pathshalapro.entity.Notes;
+import com.pathshalapro.dto.notes.NotesResponse;
 import com.pathshalapro.security.SecurityUtils;
 import com.pathshalapro.service.impl.NotesServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,17 +33,17 @@ public class NotesController {
     @PostMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Upload notes/content", description = "Upload notes by providing a URL to the content file.")
-    public ResponseEntity<ApiResponse<Notes>> createNotes(
+    public ResponseEntity<ApiResponse<NotesResponse>> createNotes(
             @PathVariable Long schoolId,
             @Valid @RequestBody NotesRequest request) {
-        Notes notes = notesService.createNotes(schoolId, request, securityUtils.getCurrentUser());
+        NotesResponse notes = notesService.createNotes(schoolId, request, securityUtils.getCurrentUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(notes, "Notes uploaded."));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get all notes for a school")
-    public ResponseEntity<ApiResponse<Page<Notes>>> getNotesBySchool(
+    public ResponseEntity<ApiResponse<Page<NotesResponse>>> getNotesBySchool(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -54,7 +54,7 @@ public class NotesController {
     @GetMapping("/subject/{subjectId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get notes by subject")
-    public ResponseEntity<ApiResponse<Page<Notes>>> getNotesBySubject(
+    public ResponseEntity<ApiResponse<Page<NotesResponse>>> getNotesBySubject(
             @PathVariable Long schoolId,
             @PathVariable Long subjectId,
             @RequestParam(defaultValue = "0") int page,
@@ -66,7 +66,7 @@ public class NotesController {
     @PutMapping("/{noteId}")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Update notes")
-    public ResponseEntity<ApiResponse<Notes>> updateNotes(
+    public ResponseEntity<ApiResponse<NotesResponse>> updateNotes(
             @PathVariable Long schoolId,
             @PathVariable Long noteId,
             @Valid @RequestBody NotesRequest request) {

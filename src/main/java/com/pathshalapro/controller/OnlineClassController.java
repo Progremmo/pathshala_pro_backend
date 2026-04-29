@@ -2,7 +2,7 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.onlineclass.OnlineClassRequest;
-import com.pathshalapro.entity.OnlineClass;
+import com.pathshalapro.dto.onlineclass.OnlineClassResponse;
 import com.pathshalapro.service.impl.OnlineClassServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,17 +33,17 @@ public class OnlineClassController {
     @PostMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Schedule an online class")
-    public ResponseEntity<ApiResponse<OnlineClass>> scheduleClass(
+    public ResponseEntity<ApiResponse<OnlineClassResponse>> scheduleClass(
             @PathVariable Long schoolId,
             @Valid @RequestBody OnlineClassRequest request) {
-        OnlineClass oc = onlineClassService.scheduleClass(schoolId, request);
+        OnlineClassResponse oc = onlineClassService.scheduleClass(schoolId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(oc, "Online class scheduled."));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get all online classes for a school")
-    public ResponseEntity<ApiResponse<Page<OnlineClass>>> getClasses(
+    public ResponseEntity<ApiResponse<Page<OnlineClassResponse>>> getClasses(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -54,7 +54,7 @@ public class OnlineClassController {
     @GetMapping("/upcoming")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get upcoming online classes (next N days)")
-    public ResponseEntity<ApiResponse<List<OnlineClass>>> getUpcoming(
+    public ResponseEntity<ApiResponse<List<OnlineClassResponse>>> getUpcoming(
             @PathVariable Long schoolId,
             @RequestParam(defaultValue = "7") int days) {
         return ResponseEntity.ok(ApiResponse.success(onlineClassService.getUpcomingClasses(schoolId, days)));
@@ -63,7 +63,7 @@ public class OnlineClassController {
     @PatchMapping("/{classId}/status")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     @Operation(summary = "Update class status (SCHEDULED/ONGOING/COMPLETED/CANCELLED)")
-    public ResponseEntity<ApiResponse<OnlineClass>> updateStatus(
+    public ResponseEntity<ApiResponse<OnlineClassResponse>> updateStatus(
             @PathVariable Long schoolId,
             @PathVariable Long classId,
             @RequestParam String status) {
