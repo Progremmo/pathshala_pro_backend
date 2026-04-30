@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * User response DTO - never exposes password or sensitive fields.
@@ -25,8 +26,11 @@ public class UserResponse {
     private String email;
     private String phone;
     private String profilePicUrl;
-    private boolean isActive;
-    private boolean isEmailVerified;
+    @JsonProperty("isActive")
+    private boolean active;
+
+    @JsonProperty("isEmailVerified")
+    private boolean emailVerified;
     private String gender;
     private LocalDate dateOfBirth;
     private String address;

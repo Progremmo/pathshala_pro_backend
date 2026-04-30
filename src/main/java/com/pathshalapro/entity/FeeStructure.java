@@ -55,6 +55,7 @@ public class FeeStructure extends BaseEntity {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    @Builder.Default
     @OneToMany(mappedBy = "feeStructure", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FeeInvoice> invoices = new ArrayList<>();
 }

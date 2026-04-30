@@ -26,6 +26,7 @@ public class SchoolSubscription extends BaseEntity {
     @Column(name = "id")
     private Long id;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private SubscriptionStatus status = SubscriptionStatus.TRIAL;
@@ -48,6 +49,7 @@ public class SchoolSubscription extends BaseEntity {
     @Column(name = "razorpay_subscription_id", length = 100)
     private String razorpaySubscriptionId;
 
+    @Builder.Default
     @Column(name = "auto_renew", nullable = false)
     private boolean autoRenew = true;
 

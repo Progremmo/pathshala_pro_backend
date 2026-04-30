@@ -52,7 +52,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .maxTeachers(plan.getMaxTeachers())
                 .maxClasses(plan.getMaxClasses())
                 .storageGb(plan.getStorageGb())
-                .isActive(plan.isActive())
+                .active(plan.isActive())
                 .build();
     }
 }

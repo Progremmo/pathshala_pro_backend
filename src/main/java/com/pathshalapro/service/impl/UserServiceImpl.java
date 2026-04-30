@@ -60,6 +60,7 @@ public class UserServiceImpl implements UserService {
         user.setGender(request.getGender());
         user.setDateOfBirth(request.getDateOfBirth());
         user.setAddress(request.getAddress());
+        if (request.getActive() != null) user.setActive(request.getActive());
 
         // Role-specific updates
         if (request.getClassRoomId() != null) {
@@ -83,6 +84,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserResponse toggleStatus(Long id, boolean active) {
         User user = userRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
@@ -107,8 +109,8 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .profilePicUrl(user.getProfilePicUrl())
-                .isActive(user.isActive())
-                .isEmailVerified(user.isEmailVerified())
+                .active(user.isActive())
+                .emailVerified(user.isEmailVerified())
                 .gender(user.getGender())
                 .dateOfBirth(user.getDateOfBirth())
                 .address(user.getAddress())

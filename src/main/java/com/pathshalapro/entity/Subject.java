@@ -45,11 +45,14 @@ public class Subject extends BaseEntity {
     private School school;
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Notes> notesList = new ArrayList<>();
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Timetable> timetables = new ArrayList<>();
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Exam> exams = new ArrayList<>();
 }

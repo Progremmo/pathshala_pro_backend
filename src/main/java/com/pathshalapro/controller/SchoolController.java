@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * School management controller.
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/schools")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "School Management", description = "Manage schools in the multi-tenant system")
 public class SchoolController {
 
@@ -62,6 +64,7 @@ public class SchoolController {
     public ResponseEntity<ApiResponse<SchoolResponse>> updateSchool(
             @PathVariable Long schoolId,
             @Valid @RequestBody SchoolRequest request) {
+        log.info("Received update request for school {}: {}", schoolId, request);
         return ResponseEntity.ok(ApiResponse.success(schoolService.updateSchool(schoolId, request), "School updated."));
     }
 

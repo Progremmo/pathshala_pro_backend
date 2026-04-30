@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
 
@@ -24,7 +25,8 @@ public class SchoolResponse {
     private String email;
     private String website;
     private String logoUrl;
-    private boolean isActive;
+    @JsonProperty("isActive")
+    private boolean active;
     private SubscriptionStatus subscriptionStatus;
     private LocalDateTime createdAt;
 }

@@ -42,6 +42,7 @@ public class Notes extends BaseEntity {
     @Column(name = "academic_year", length = 20)
     private String academicYear;
 
+    @Builder.Default
     @Column(name = "is_visible", nullable = false)
     private boolean isVisible = true;
 

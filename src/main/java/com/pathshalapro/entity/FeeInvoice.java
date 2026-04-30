@@ -36,18 +36,22 @@ public class FeeInvoice extends BaseEntity {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
+    @Builder.Default
     @Column(name = "discount_amount", precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "fine_amount", precision = 10, scale = 2)
     private BigDecimal fineAmount = BigDecimal.ZERO;
 
     @Column(name = "net_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal netAmount;
 
+    @Builder.Default
     @Column(name = "paid_amount", precision = 10, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
@@ -79,6 +83,7 @@ public class FeeInvoice extends BaseEntity {
     @JoinColumn(name = "fee_structure_id", nullable = false)
     private FeeStructure feeStructure;
 
+    @Builder.Default
     @OneToMany(mappedBy = "feeInvoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Payment> payments = new ArrayList<>();
 }

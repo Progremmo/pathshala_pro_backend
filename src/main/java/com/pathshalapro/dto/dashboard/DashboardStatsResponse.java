@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -19,7 +18,7 @@ public class DashboardStatsResponse {
     private BigDecimal monthlyCollection;
     private BigDecimal monthlyPending;
     private double todayAttendancePercentage;
-    
+
     private List<FeeTrendData> feeTrend;
     private List<AttendanceDistribution> attendanceDistribution;
 

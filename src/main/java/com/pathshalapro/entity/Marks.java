@@ -32,6 +32,7 @@ public class Marks extends BaseEntity {
     @Column(name = "remarks", length = 500)
     private String remarks;
 
+    @Builder.Default
     @Column(name = "is_absent", nullable = false)
     private boolean isAbsent = false;
 

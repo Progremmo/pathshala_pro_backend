@@ -53,9 +53,11 @@ public class ClassRoom extends BaseEntity {
     @JoinColumn(name = "class_teacher_id")
     private User classTeacher;
 
+    @Builder.Default
     @OneToMany(mappedBy = "classRoom", fetch = FetchType.LAZY)
     private List<User> students = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "classRoom", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Timetable> timetables = new ArrayList<>();
 }

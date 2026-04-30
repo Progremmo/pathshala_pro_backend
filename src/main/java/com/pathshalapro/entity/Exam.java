@@ -57,6 +57,7 @@ public class Exam extends BaseEntity {
     @Column(name = "instructions", columnDefinition = "TEXT")
     private String instructions;
 
+    @Builder.Default
     @Column(name = "is_result_published", nullable = false)
     private boolean isResultPublished = false;
 
@@ -72,6 +73,7 @@ public class Exam extends BaseEntity {
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;
 
+    @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Marks> marksList = new ArrayList<>();
 }

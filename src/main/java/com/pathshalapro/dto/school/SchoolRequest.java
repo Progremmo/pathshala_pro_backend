@@ -2,6 +2,9 @@ package com.pathshalapro.dto.school;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
 public class SchoolRequest {
@@ -20,7 +23,7 @@ public class SchoolRequest {
     private String state;
     private String pincode;
 
-    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid phone number")
+    @Pattern(regexp = "^[+]?[0-9\\s-]{10,20}$", message = "Invalid phone number")
     private String phone;
 
     @Email(message = "Invalid email format")
@@ -28,4 +31,8 @@ public class SchoolRequest {
 
     private String website;
     private String logoUrl;
+    @JsonProperty("isActive")
+    @Getter(onMethod_ = {@JsonProperty("isActive")})
+    @Setter(onMethod_ = {@JsonProperty("isActive")})
+    private boolean active = true;
 }

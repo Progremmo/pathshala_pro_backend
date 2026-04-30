@@ -31,6 +31,7 @@ public class Role extends BaseEntity {
     @Column(name = "description", length = 255)
     private String description;
 
+    @Builder.Default
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     private List<User> users = new ArrayList<>();
 }

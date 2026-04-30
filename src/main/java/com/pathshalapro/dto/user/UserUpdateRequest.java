@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDate;
 
@@ -22,12 +25,16 @@ public class UserUpdateRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid phone number")
+    @Pattern(regexp = "^[+]?[0-9\\s-]{10,20}$", message = "Invalid phone number")
     private String phone;
 
     private String gender;
     private LocalDate dateOfBirth;
     private String address;
+    @JsonProperty("isActive")
+    @Getter(onMethod_ = {@JsonProperty("isActive")})
+    @Setter(onMethod_ = {@JsonProperty("isActive")})
+    private Boolean active;
 
     // Student specific
     private Long classRoomId;

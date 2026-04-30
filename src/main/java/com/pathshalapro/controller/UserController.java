@@ -14,10 +14,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "User Management", description = "Endpoints for managing and listing users")
 public class UserController {
 
@@ -68,6 +70,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(
             @PathVariable Long id,
             @RequestParam boolean active) {
+        log.info("Received status toggle request for user {}: {}", id, active);
         return ResponseEntity.ok(ApiResponse.success(userService.toggleStatus(id, active)));
     }
 }

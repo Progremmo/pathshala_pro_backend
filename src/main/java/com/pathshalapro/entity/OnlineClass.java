@@ -51,12 +51,14 @@ public class OnlineClass extends BaseEntity {
     private Integer durationMinutes;
 
     @Column(name = "is_recurring", nullable = false)
+    @Builder.Default
     private boolean isRecurring = false;
 
     @Column(name = "recurrence_pattern", length = 50)
     private String recurrencePattern; // DAILY, WEEKLY, etc.
 
     @Column(name = "status", length = 20)
+    @Builder.Default
     private String status = "SCHEDULED"; // SCHEDULED, ONGOING, COMPLETED, CANCELLED
 
     @Column(name = "recording_url", length = 500)

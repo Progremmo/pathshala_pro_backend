@@ -110,6 +110,7 @@ public class SchoolServiceImpl {
         school.setEmail(request.getEmail());
         school.setWebsite(request.getWebsite());
         school.setLogoUrl(request.getLogoUrl());
+        school.setActive(request.isActive());
 
         return mapToResponse(schoolRepository.save(school));
     }
@@ -137,7 +138,7 @@ public class SchoolServiceImpl {
                 .email(school.getEmail())
                 .website(school.getWebsite())
                 .logoUrl(school.getLogoUrl())
-                .isActive(school.isActive())
+                .active(school.isActive())
                 .subscriptionStatus(school.getSubscriptionStatus())
                 .createdAt(school.getCreatedAt())
                 .build();

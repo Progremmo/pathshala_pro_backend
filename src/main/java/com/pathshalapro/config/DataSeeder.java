@@ -36,9 +36,10 @@ public class DataSeeder {
     private final SchoolRepository schoolRepository;
     private final SubscriptionPlanRepository planRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
 
     @Bean
-    @Profile({"default", "dev", "prod"})
+    @Profile({ "default", "dev", "prod" })
     public CommandLineRunner seedData() {
         return args -> {
             log.info("==== PathshalaPro Data Seeder Starting ====");
@@ -46,8 +47,22 @@ public class DataSeeder {
             seedSubscriptionPlans();
             seedProjectAdmin();
             seedDemoSchool();
+            seedSchoolConfigs();
             log.info("==== Data Seeder Completed ====");
         };
+    }
+
+    private void seedSchoolConfigs() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            log.info("Seeding configurations for demo school...");
+            schoolConfigService.saveConfig(school.getId(), "ACADEMIC_YEARS", "[\"2024-25\", \"2025-26\", \"2026-27\"]");
+            schoolConfigService.saveConfig(school.getId(), "FEE_TYPES",
+                    "[\"TUITION\", \"TRANSPORT\", \"LIBRARY\", \"LABORATORY\", \"SPORTS\", \"EXAM\", \"ADMISSION\", \"OTHER\"]");
+            schoolConfigService.saveConfig(school.getId(), "FEE_FREQUENCIES",
+                    "[\"MONTHLY\", \"QUARTERLY\", \"HALF_YEARLY\", \"ANNUALLY\", \"ONE_TIME\"]");
+            schoolConfigService.saveConfig(school.getId(), "EXAM_TYPES",
+                    "{\"UNIT_TEST\":\"Unit Test\",\"MID_TERM\":\"Mid Term\",\"FINAL_TERM\":\"Final Term\",\"INTERNAL\":\"Internal\",\"PRACTICAL\":\"Practical\",\"QUIZ\":\"Quiz\",\"ASSIGNMENT\":\"Assignment\"}");
+        });
     }
 
     private void seedRoles() {
@@ -66,40 +81,39 @@ public class DataSeeder {
     private void seedSubscriptionPlans() {
         if (planRepository.count() == 0) {
             List<SubscriptionPlan> plans = List.of(
-                SubscriptionPlan.builder()
-                    .name("STARTER")
-                    .description("Perfect for small schools. Up to 200 students.")
-                    .priceMonthly(new BigDecimal("999.00"))
-                    .priceAnnually(new BigDecimal("9999.00"))
-                    .maxStudents(200)
-                    .maxTeachers(20)
-                    .maxClasses(10)
-                    .storageGb(5)
-                    .isActive(true)
-                    .build(),
-                SubscriptionPlan.builder()
-                    .name("PRO")
-                    .description("For medium-sized schools. Up to 1000 students.")
-                    .priceMonthly(new BigDecimal("2499.00"))
-                    .priceAnnually(new BigDecimal("24999.00"))
-                    .maxStudents(1000)
-                    .maxTeachers(100)
-                    .maxClasses(50)
-                    .storageGb(25)
-                    .isActive(true)
-                    .build(),
-                SubscriptionPlan.builder()
-                    .name("ENTERPRISE")
-                    .description("Unlimited students. Custom pricing available.")
-                    .priceMonthly(new BigDecimal("5999.00"))
-                    .priceAnnually(new BigDecimal("59999.00"))
-                    .maxStudents(null) // Unlimited
-                    .maxTeachers(null)
-                    .maxClasses(null)
-                    .storageGb(100)
-                    .isActive(true)
-                    .build()
-            );
+                    SubscriptionPlan.builder()
+                            .name("STARTER")
+                            .description("Perfect for small schools. Up to 200 students.")
+                            .priceMonthly(new BigDecimal("999.00"))
+                            .priceAnnually(new BigDecimal("9999.00"))
+                            .maxStudents(200)
+                            .maxTeachers(20)
+                            .maxClasses(10)
+                            .storageGb(5)
+                            .isActive(true)
+                            .build(),
+                    SubscriptionPlan.builder()
+                            .name("PRO")
+                            .description("For medium-sized schools. Up to 1000 students.")
+                            .priceMonthly(new BigDecimal("2499.00"))
+                            .priceAnnually(new BigDecimal("24999.00"))
+                            .maxStudents(1000)
+                            .maxTeachers(100)
+                            .maxClasses(50)
+                            .storageGb(25)
+                            .isActive(true)
+                            .build(),
+                    SubscriptionPlan.builder()
+                            .name("ENTERPRISE")
+                            .description("Unlimited students. Custom pricing available.")
+                            .priceMonthly(new BigDecimal("5999.00"))
+                            .priceAnnually(new BigDecimal("59999.00"))
+                            .maxStudents(null) // Unlimited
+                            .maxTeachers(null)
+                            .maxClasses(null)
+                            .storageGb(100)
+                            .isActive(true)
+                            .build());
             planRepository.saveAll(plans);
             log.info("Seeded {} subscription plans.", plans.size());
         }
@@ -126,8 +140,9 @@ public class DataSeeder {
     }
 
     private void seedDemoSchool() {
+        School school;
         if (!schoolRepository.existsByCode("DEMO001")) {
-            School school = School.builder()
+            school = School.builder()
                     .name("Delhi Public School - Demo")
                     .code("DEMO001")
                     .address("123 Demo Street, Model Town")
@@ -140,8 +155,42 @@ public class DataSeeder {
                     .subscriptionStatus(SubscriptionStatus.TRIAL)
                     .build();
 
-            schoolRepository.save(school);
+            school = schoolRepository.save(school);
             log.info("Seeded demo school: DEMO001");
+        } else {
+            school = schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").orElse(null);
+        }
+
+        if (school != null) {
+            // Seed School Admin
+            seedUser(school, "School", "Admin", "school@demo.com", RoleName.SCHOOL_ADMIN);
+            // Seed Teacher
+            seedUser(school, "John", "Doe", "teacher@demo.com", RoleName.TEACHER);
+            // Seed Student
+            seedUser(school, "Jane", "Doe", "student@demo.com", RoleName.STUDENT);
+            // Seed Parent
+            seedUser(school, "Parent", "Account", "parent@demo.com", RoleName.PARENT);
+        }
+    }
+
+    private void seedUser(School school, String first, String last, String email, RoleName roleName) {
+        if (!userRepository.existsByEmail(email)) {
+            Role role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new RuntimeException(roleName + " role not found."));
+
+            User user = User.builder()
+                    .firstName(first)
+                    .lastName(last)
+                    .email(email)
+                    .password(passwordEncoder.encode("Demo@123"))
+                    .isActive(true)
+                    .isEmailVerified(true)
+                    .school(school)
+                    .roles(List.of(role))
+                    .build();
+
+            userRepository.save(user);
+            log.info("Seeded {}: {} / Demo@123", roleName, email);
         }
     }
 

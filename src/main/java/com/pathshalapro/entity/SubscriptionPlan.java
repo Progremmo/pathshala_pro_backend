@@ -50,6 +50,7 @@ public class SubscriptionPlan extends BaseEntity {
     @Column(name = "features", columnDefinition = "JSON")
     private String features; // JSON array of feature flags
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 }

@@ -20,8 +20,6 @@ import com.pathshalapro.entity.Otp;
 import com.pathshalapro.dto.auth.RegisterAdminRequest;
 import com.pathshalapro.dto.auth.ForgotPasswordRequest;
 import com.pathshalapro.dto.auth.ResetPasswordRequest;
-import com.pathshalapro.security.JwtTokenProvider;
-import com.pathshalapro.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -311,7 +309,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .isActive(user.isActive())
+                .active(user.isActive())
                 .roles(user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList()))
                 .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)

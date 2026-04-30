@@ -36,6 +36,7 @@ public class Announcement extends BaseEntity {
     @Column(name = "target_grade", length = 20)
     private String targetGrade; // Specific grade or null for all
 
+    @Builder.Default
     @Column(name = "is_pinned", nullable = false)
     private boolean isPinned = false;
 

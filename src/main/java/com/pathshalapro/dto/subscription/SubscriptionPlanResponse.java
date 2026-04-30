@@ -23,5 +23,5 @@ public class SubscriptionPlanResponse {
     private Integer maxClasses;
     private Integer storageGb;
     private List<String> features;
-    private boolean isActive;
+    private boolean active;
 }

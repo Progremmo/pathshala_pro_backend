@@ -32,9 +32,11 @@ public class Payment extends BaseEntity {
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
+    @Builder.Default
     @Column(name = "currency", nullable = false, length = 5)
     private String currency = "INR";
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PaymentStatus status = PaymentStatus.PENDING;
