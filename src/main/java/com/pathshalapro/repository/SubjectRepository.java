@@ -21,4 +21,6 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     List<Subject> findBySchoolIdAndGradeAndIsDeletedFalse(Long schoolId, String grade);
 
     boolean existsByCodeAndSchoolIdAndIsDeletedFalse(String code, Long schoolId);
+    
+    Optional<Subject> findByCodeAndSchoolIdAndIsDeletedFalse(String code, Long schoolId);
 }

@@ -30,4 +30,7 @@ public interface ClassRoomRepository extends JpaRepository<ClassRoom, Long> {
 
     boolean existsByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse(
             String name, String section, Long schoolId, String academicYear);
+
+    Optional<ClassRoom> findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse(
+            String name, String section, Long schoolId, String academicYear);
 }

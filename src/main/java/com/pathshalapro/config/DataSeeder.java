@@ -1,15 +1,8 @@
 package com.pathshalapro.config;
 
-import com.pathshalapro.entity.Role;
-import com.pathshalapro.entity.School;
-import com.pathshalapro.entity.SubscriptionPlan;
-import com.pathshalapro.entity.User;
-import com.pathshalapro.entity.enums.RoleName;
-import com.pathshalapro.entity.enums.SubscriptionStatus;
-import com.pathshalapro.repository.RoleRepository;
-import com.pathshalapro.repository.SchoolRepository;
-import com.pathshalapro.repository.SubscriptionPlanRepository;
-import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.entity.*;
+import com.pathshalapro.entity.enums.*;
+import com.pathshalapro.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -17,9 +10,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Data seeder - runs on application startup.
@@ -36,6 +31,10 @@ public class DataSeeder {
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final ClassRoomRepository classRoomRepository;
+    private final SubjectRepository subjectRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final ExamRepository examRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
 
@@ -49,6 +48,7 @@ public class DataSeeder {
             seedProjectAdmin();
             seedDemoSchool();
             seedSchoolConfigs();
+            seedDemoDataForSchool();
             log.info("==== Data Seeder Completed ====");
         };
     }
@@ -174,8 +174,125 @@ public class DataSeeder {
         }
     }
 
-    private void seedUser(School school, String first, String last, String email, RoleName roleName) {
-        if (!userRepository.existsByEmail(email)) {
+    private void seedDemoDataForSchool() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            log.info("Seeding comprehensive demo data for school: {}", school.getName());
+
+            // 1. Seed Classrooms
+            ClassRoom class10A = seedClassRoom(school, "Class 10", "A", "10", "2024-25");
+            ClassRoom class10B = seedClassRoom(school, "Class 10", "B", "10", "2024-25");
+            seedClassRoom(school, "Class 9", "A", "9", "2024-25");
+
+            // 2. Seed Subjects
+            Subject math = seedSubject(school, "Mathematics", "MATH101", "10");
+            Subject science = seedSubject(school, "Science", "SCI101", "10");
+            seedSubject(school, "English", "ENG101", "10");
+            seedSubject(school, "History", "HIST901", "9");
+
+            // 3. Seed More Students
+            User student1 = seedUser(school, "Alice", "Johnson", "alice@demo.com", RoleName.STUDENT);
+            User student2 = seedUser(school, "Bob", "Smith", "bob@demo.com", RoleName.STUDENT);
+            User student3 = seedUser(school, "Charlie", "Brown", "charlie@demo.com", RoleName.STUDENT);
+
+            // Assign students to classrooms
+            assignStudentToClass(student1, class10A);
+            assignStudentToClass(student2, class10A);
+            assignStudentToClass(student3, class10B);
+
+            // 4. Seed Attendance for Alice
+            seedAttendance(school, student1, class10A, 20, 18); // 20 days total, 18 present
+
+            // 5. Seed Upcoming Exams
+            seedExam(school, class10A, math, "Mid-Term Math Exam", ExamType.MID_TERM, LocalDate.now().plusDays(5));
+            seedExam(school, class10A, science, "Unit Test - Physics", ExamType.UNIT_TEST, LocalDate.now().plusDays(2));
+        });
+    }
+
+    private ClassRoom seedClassRoom(School school, String name, String section, String grade, String academicYear) {
+        return classRoomRepository
+                .findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse(name, section, school.getId(),
+                        academicYear)
+                .orElseGet(() -> {
+                    ClassRoom cr = ClassRoom.builder()
+                            .school(school)
+                            .name(name)
+                            .section(section)
+                            .grade(grade)
+                            .academicYear(academicYear)
+                            .capacity(40)
+                            .build();
+                    ClassRoom saved = classRoomRepository.save(cr);
+                    log.info("Seeded classroom: {} - {}", name, section);
+                    return saved;
+                });
+    }
+
+    private Subject seedSubject(School school, String name, String code, String grade) {
+        return subjectRepository.findByCodeAndSchoolIdAndIsDeletedFalse(code, school.getId())
+                .orElseGet(() -> {
+                    Subject s = Subject.builder()
+                            .school(school)
+                            .name(name)
+                            .code(code)
+                            .grade(grade)
+                            .build();
+                    Subject saved = subjectRepository.save(s);
+                    log.info("Seeded subject: {}", name);
+                    return saved;
+                });
+    }
+
+    private void assignStudentToClass(User student, ClassRoom classRoom) {
+        if (student.getClassRoom() == null) {
+            student.setClassRoom(classRoom);
+            userRepository.save(student);
+            log.info("Assigned student {} to class {}", student.getEmail(), classRoom.getName());
+        }
+    }
+
+    private void seedAttendance(School school, User student, ClassRoom classRoom, int totalDays, int presentDays) {
+        if (attendanceRepository.countByStudentIdAndIsDeletedFalse(student.getId()) == 0) {
+            LocalDate date = LocalDate.now().minusDays(totalDays);
+            for (int i = 0; i < totalDays; i++) {
+                AttendanceStatus status = (i < presentDays) ? AttendanceStatus.PRESENT : AttendanceStatus.ABSENT;
+                Attendance attendance = Attendance.builder()
+                        .school(school)
+                        .student(student)
+                        .classRoom(classRoom)
+                        .attendanceDate(date)
+                        .status(status)
+                        .build();
+                attendanceRepository.save(attendance);
+                date = date.plusDays(1);
+            }
+            log.info("Seeded attendance for student: {}", student.getEmail());
+        }
+    }
+
+    private void seedExam(School school, ClassRoom classRoom, Subject subject, String title, ExamType type,
+            LocalDate date) {
+        if (!examRepository.existsBySchoolIdAndNameAndIsDeletedFalse(school.getId(), title)) {
+            Exam exam = Exam.builder()
+                    .school(school)
+                    .classRoom(classRoom)
+                    .subject(subject)
+                    .name(title)
+                    .examType(type)
+                    .examDate(date)
+                    .startTime(LocalTime.of(10, 0))
+                    .durationMinutes(180)
+                    .totalMarks(100.0)
+                    .passingMarks(33.0)
+                    .academicYear(classRoom.getAcademicYear())
+                    .build();
+            examRepository.save(exam);
+            log.info("Seeded exam: {}", title);
+        }
+    }
+
+    private User seedUser(School school, String first, String last, String email, RoleName roleName) {
+        Optional<User> existing = userRepository.findByEmailAndIsDeletedFalse(email);
+        if (existing.isEmpty()) {
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException(roleName + " role not found."));
 
@@ -190,9 +307,11 @@ public class DataSeeder {
                     .roles(List.of(role))
                     .build();
 
-            userRepository.save(user);
+            User saved = userRepository.save(user);
             log.info("Seeded {}: {} / Demo@123", roleName, email);
+            return saved;
         }
+        return existing.get();
     }
 
     private String getRoleDescription(RoleName roleName) {

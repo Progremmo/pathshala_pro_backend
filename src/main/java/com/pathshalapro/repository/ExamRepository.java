@@ -24,4 +24,6 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     List<Exam> findPublishedResultsByClassRoom(@Param("classRoomId") Long classRoomId);
 
     Page<Exam> findBySchoolIdAndClassRoomIdAndIsDeletedFalse(Long schoolId, Long classRoomId, Pageable pageable);
+
+    boolean existsBySchoolIdAndNameAndIsDeletedFalse(Long schoolId, String name);
 }

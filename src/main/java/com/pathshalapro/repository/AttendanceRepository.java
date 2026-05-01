@@ -57,4 +57,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     @Query("SELECT COUNT(a) FROM Attendance a WHERE a.school.id = :schoolId AND a.attendanceDate = :date AND a.isDeleted = false")
     long countBySchoolIdAndDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
+
+    long countByStudentIdAndIsDeletedFalse(Long studentId);
 }
