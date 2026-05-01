@@ -2,6 +2,7 @@ package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.fee.*;
 import com.pathshalapro.entity.*;
+import com.pathshalapro.entity.enums.NotificationType;
 import com.pathshalapro.entity.enums.PaymentStatus;
 import com.pathshalapro.exception.ApiException;
 import com.pathshalapro.repository.*;
@@ -20,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,10 +39,15 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FeeServiceImpl {
 
     private final FeeStructureRepository feeStructureRepository;
+    private final FeeHeadRepository feeHeadRepository;
+    private final FeeGroupRepository feeGroupRepository;
+    private final FeeAllocationRepository feeAllocationRepository;
     private final FeeInvoiceRepository feeInvoiceRepository;
+    private final NotificationServiceImpl notificationService;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final ClassRoomRepository classRoomRepository;
     private final RazorpayClient razorpayClient;
 
     @Value("${razorpay.key.secret}")
@@ -50,6 +58,94 @@ public class FeeServiceImpl {
 
     // Counter for invoice number generation
     private final AtomicLong invoiceCounter = new AtomicLong(1000);
+
+    // ---- Fee Heads ----
+
+    @Transactional
+    public FeeHeadResponse createFeeHead(Long schoolId, FeeHeadRequest request) {
+        School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
+                .orElseThrow(() -> ApiException.notFound("School not found."));
+
+        FeeHead head = FeeHead.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .isMandatory(request.isMandatory())
+                .school(school)
+                .build();
+
+        return mapToHeadResponse(feeHeadRepository.save(head));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeeHeadResponse> getFeeHeads(Long schoolId) {
+        return feeHeadRepository.findBySchoolIdAndIsDeletedFalse(schoolId)
+                .stream().map(this::mapToHeadResponse).toList();
+    }
+
+    // ---- Fee Groups ----
+
+    @Transactional
+    public FeeGroupResponse createFeeGroup(Long schoolId, FeeGroupRequest request) {
+        School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
+                .orElseThrow(() -> ApiException.notFound("School not found."));
+
+        FeeGroup group = FeeGroup.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .grade(request.getGrade())
+                .school(school)
+                .build();
+
+        List<FeeGroupItem> items = request.getItems().stream().map(itemReq -> {
+            FeeHead head = feeHeadRepository.findById(itemReq.getFeeHeadId())
+                    .orElseThrow(() -> ApiException.notFound("Fee head not found: " + itemReq.getFeeHeadId()));
+            return FeeGroupItem.builder()
+                    .feeGroup(group)
+                    .feeHead(head)
+                    .amount(itemReq.getAmount())
+                    .build();
+        }).toList();
+
+        group.setFeeItems(new java.util.ArrayList<>(items));
+        return mapToGroupResponse(feeGroupRepository.save(group));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeeGroupResponse> getFeeGroups(Long schoolId) {
+        return feeGroupRepository.findBySchoolIdAndIsDeletedFalse(schoolId)
+                .stream().map(this::mapToGroupResponse).toList();
+    }
+
+    // ---- Fee Allocations ----
+
+    @Transactional
+    public void createAllocation(Long schoolId, Long groupId, Long classId, Long studentId, String academicYear) {
+        School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
+                .orElseThrow(() -> ApiException.notFound("School not found."));
+
+        FeeGroup group = feeGroupRepository.findById(groupId)
+                .orElseThrow(() -> ApiException.notFound("Fee group not found."));
+
+        FeeAllocation allocation = FeeAllocation.builder()
+                .feeGroup(group)
+                .academicYear(academicYear)
+                .school(school)
+                .build();
+
+        if (classId != null) {
+            ClassRoom classRoom = classRoomRepository.findById(classId)
+                    .orElseThrow(() -> ApiException.notFound("Class not found."));
+            allocation.setClassRoom(classRoom);
+        }
+
+        if (studentId != null) {
+            User student = userRepository.findById(studentId)
+                    .orElseThrow(() -> ApiException.notFound("Student not found."));
+            allocation.setStudent(student);
+        }
+
+        feeAllocationRepository.save(allocation);
+    }
 
     // ---- Fee Structure ----
 
@@ -314,6 +410,67 @@ public class FeeServiceImpl {
         return amount != null ? amount : BigDecimal.ZERO;
     }
 
+    @Transactional
+    public void generateInvoicesForClass(Long schoolId, Long classId, String academicYear, Integer month, Integer year, LocalDate dueDate) {
+        ClassRoom classRoom = classRoomRepository.findById(classId)
+                .orElseThrow(() -> ApiException.notFound("Class not found."));
+
+        List<FeeAllocation> allocations = feeAllocationRepository
+                .findByClassRoomIdAndAcademicYearAndIsDeletedFalse(classId, academicYear);
+
+        if (allocations.isEmpty()) {
+            throw ApiException.badRequest("No fee groups allocated to this class for the given academic year.");
+        }
+
+        for (User student : classRoom.getStudents()) {
+            if (student.isDeleted()) continue;
+
+            for (FeeAllocation allocation : allocations) {
+                FeeGroup group = allocation.getFeeGroup();
+                
+                // Check if invoice already exists
+                boolean exists = feeInvoiceRepository.existsByStudentIdAndPeriodMonthAndPeriodYearAndAcademicYearAndIsDeletedFalse(
+                        student.getId(), month, year, academicYear);
+                
+                if (exists) continue;
+
+                BigDecimal totalAmount = group.getFeeItems().stream()
+                        .map(FeeGroupItem::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                String invoiceNumber = generateInvoiceNumber(schoolId);
+
+                FeeInvoice invoice = FeeInvoice.builder()
+                        .invoiceNumber(invoiceNumber)
+                        .totalAmount(totalAmount)
+                        .netAmount(totalAmount)
+                        .paidAmount(BigDecimal.ZERO)
+                        .paymentStatus(PaymentStatus.PENDING)
+                        .dueDate(dueDate)
+                        .periodMonth(month)
+                        .periodYear(year)
+                        .academicYear(academicYear)
+                        .school(classRoom.getSchool())
+                        .student(student)
+                        .remarks("Generated for " + group.getName())
+                        .build();
+
+                final FeeInvoice savedInvoice = feeInvoiceRepository.save(invoice);
+
+                List<FeeInvoiceItem> items = group.getFeeItems().stream()
+                        .map(item -> FeeInvoiceItem.builder()
+                                .feeInvoice(savedInvoice)
+                                .feeHead(item.getFeeHead())
+                                .amount(item.getAmount())
+                                .build())
+                        .toList();
+                
+                savedInvoice.setItems(items);
+                feeInvoiceRepository.save(savedInvoice);
+            }
+        }
+    }
+
     // ---- Helpers ----
 
     private boolean verifySignature(String orderId, String paymentId, String signature) {
@@ -370,6 +527,31 @@ public class FeeServiceImpl {
                 .build();
     }
 
+    private FeeHeadResponse mapToHeadResponse(FeeHead h) {
+        return FeeHeadResponse.builder()
+                .id(h.getId())
+                .name(h.getName())
+                .description(h.getDescription())
+                .isMandatory(h.isMandatory())
+                .createdAt(h.getCreatedAt())
+                .build();
+    }
+
+    private FeeGroupResponse mapToGroupResponse(FeeGroup g) {
+        return FeeGroupResponse.builder()
+                .id(g.getId())
+                .name(g.getName())
+                .description(g.getDescription())
+                .grade(g.getGrade())
+                .items(g.getFeeItems().stream().map(i -> FeeGroupResponse.FeeGroupItemResponse.builder()
+                        .id(i.getId())
+                        .feeHeadId(i.getFeeHead().getId())
+                        .feeHeadName(i.getFeeHead().getName())
+                        .amount(i.getAmount())
+                        .build()).toList())
+                .build();
+    }
+
     private FeeInvoiceResponse mapToResponse(FeeInvoice i) {
         return FeeInvoiceResponse.builder()
                 .id(i.getId())
@@ -392,5 +574,51 @@ public class FeeServiceImpl {
                 .feeStructureName(i.getFeeStructure().getName())
                 .createdAt(i.getCreatedAt())
                 .build();
+    }
+
+    @Transactional
+    public void notifyParentsOfPendingFees(Long schoolId, Long classId, String academicYear) {
+        List<FeeInvoice> pendingInvoices = feeInvoiceRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, academicYear)
+                .stream()
+                .filter(i -> i.getPaymentStatus() != PaymentStatus.PAID)
+                .filter(i -> classId == null || i.getStudent().getClassRoom().getId().equals(classId))
+                .toList();
+
+        for (FeeInvoice invoice : pendingInvoices) {
+            User student = invoice.getStudent();
+            User parent = student.getParent();
+
+            String title = "Fee Payment Reminder: " + invoice.getInvoiceNumber();
+            String message = String.format("Dear Parent, a fee of %s is pending for %s. Please pay online to avoid late fees.",
+                    invoice.getNetAmount().toString(), student.getFirstName());
+
+            // 1. In-app Notification to Parent
+            if (parent != null) {
+                notificationService.sendNotification(schoolId,
+                        com.pathshalapro.dto.notification.NotificationRequest.builder()
+                                .title(title)
+                                .message(message)
+                                .recipientId(parent.getId())
+                                .notificationType(NotificationType.FEE_REMINDER)
+                                .referenceId(invoice.getId())
+                                .referenceType("FEE_INVOICE")
+                                .build(),
+                        null);
+            }
+
+            // 2. In-app Notification to Student
+            notificationService.sendNotification(schoolId,
+                    com.pathshalapro.dto.notification.NotificationRequest.builder()
+                            .title(title)
+                            .message(message)
+                            .recipientId(student.getId())
+                            .notificationType(NotificationType.FEE_REMINDER)
+                            .referenceId(invoice.getId())
+                            .referenceType("FEE_INVOICE")
+                            .build(),
+                    null);
+
+            log.info("Notification sent for invoice: {}", invoice.getInvoiceNumber());
+        }
     }
 }

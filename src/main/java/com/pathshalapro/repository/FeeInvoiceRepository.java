@@ -23,6 +23,8 @@ public interface FeeInvoiceRepository extends JpaRepository<FeeInvoice, Long> {
     Page<FeeInvoice> findBySchoolIdAndIsDeletedFalse(Long schoolId, Pageable pageable);
 
     Page<FeeInvoice> findByStudentIdAndIsDeletedFalse(Long studentId, Pageable pageable);
+    
+    List<FeeInvoice> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear);
 
     Page<FeeInvoice> findBySchoolIdAndPaymentStatusAndIsDeletedFalse(Long schoolId, PaymentStatus status, Pageable pageable);
 
@@ -41,6 +43,9 @@ public interface FeeInvoiceRepository extends JpaRepository<FeeInvoice, Long> {
 
     boolean existsByStudentIdAndFeeStructureIdAndPeriodMonthAndPeriodYearAndIsDeletedFalse(
             Long studentId, Long feeStructureId, Integer month, Integer year);
+
+    boolean existsByStudentIdAndPeriodMonthAndPeriodYearAndAcademicYearAndIsDeletedFalse(
+            Long studentId, Integer month, Integer year, String academicYear);
     @Query("SELECT SUM(fi.netAmount) FROM FeeInvoice fi WHERE fi.school.id = :schoolId AND fi.paymentStatus = 'PAID' AND fi.isDeleted = false AND fi.updatedAt >= :startDate")
     BigDecimal getCollectionSince(@Param("schoolId") Long schoolId, @Param("startDate") LocalDateTime startDate);
 

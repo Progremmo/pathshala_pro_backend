@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -149,6 +151,78 @@ public class FeeController {
             @Valid @RequestBody PaymentVerifyRequest request) {
         PaymentResponse payment = feeService.verifyPayment(request);
         return ResponseEntity.ok(ApiResponse.success(payment, "Payment verified successfully."));
+    }
+
+    // ---- New Fee Management (Standard Way) ----
+
+    @PostMapping("/heads")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Create fee head")
+    public ResponseEntity<ApiResponse<FeeHeadResponse>> createFeeHead(
+            @PathVariable Long schoolId,
+            @Valid @RequestBody FeeHeadRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(feeService.createFeeHead(schoolId, request)));
+    }
+
+    @GetMapping("/heads")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Get all fee heads")
+    public ResponseEntity<ApiResponse<List<FeeHeadResponse>>> getFeeHeads(@PathVariable Long schoolId) {
+        return ResponseEntity.ok(ApiResponse.success(feeService.getFeeHeads(schoolId)));
+    }
+
+    @PostMapping("/groups")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Create fee group")
+    public ResponseEntity<ApiResponse<FeeGroupResponse>> createFeeGroup(
+            @PathVariable Long schoolId,
+            @Valid @RequestBody FeeGroupRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(feeService.createFeeGroup(schoolId, request)));
+    }
+
+    @GetMapping("/groups")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Get all fee groups")
+    public ResponseEntity<ApiResponse<List<FeeGroupResponse>>> getFeeGroups(@PathVariable Long schoolId) {
+        return ResponseEntity.ok(ApiResponse.success(feeService.getFeeGroups(schoolId)));
+    }
+
+    @PostMapping("/allocations")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Allocate fee group to class or student")
+    public ResponseEntity<ApiResponse<Void>> createAllocation(
+            @PathVariable Long schoolId,
+            @RequestParam Long groupId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long studentId,
+            @RequestParam String academicYear) {
+        feeService.createAllocation(schoolId, groupId, classId, studentId, academicYear);
+        return ResponseEntity.ok(ApiResponse.success(null, "Allocation created."));
+    }
+
+    @PostMapping("/generate-class-invoices")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Bulk generate invoices for a class")
+    public ResponseEntity<ApiResponse<Void>> generateInvoices(
+            @PathVariable Long schoolId,
+            @RequestParam Long classId,
+            @RequestParam String academicYear,
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam LocalDate dueDate) {
+        feeService.generateInvoicesForClass(schoolId, classId, academicYear, month, year, dueDate);
+        return ResponseEntity.ok(ApiResponse.success(null, "Invoices generation started/completed."));
+    }
+
+    @PostMapping("/notify-parents")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Notify parents about pending fees")
+    public ResponseEntity<ApiResponse<Void>> notifyParents(
+            @PathVariable Long schoolId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam String academicYear) {
+        feeService.notifyParentsOfPendingFees(schoolId, classId, academicYear);
+        return ResponseEntity.ok(ApiResponse.success(null, "Notifications sent to parents."));
     }
 
     // ---- Reports ----

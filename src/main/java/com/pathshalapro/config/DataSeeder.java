@@ -35,6 +35,9 @@ public class DataSeeder {
     private final SubjectRepository subjectRepository;
     private final AttendanceRepository attendanceRepository;
     private final ExamRepository examRepository;
+    private final FeeHeadRepository feeHeadRepository;
+    private final FeeGroupRepository feeGroupRepository;
+    private final FeeAllocationRepository feeAllocationRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
 
@@ -49,6 +52,7 @@ public class DataSeeder {
             seedDemoSchool();
             seedSchoolConfigs();
             seedDemoDataForSchool();
+            seedFeeData();
             log.info("==== Data Seeder Completed ====");
         };
     }
@@ -312,6 +316,48 @@ public class DataSeeder {
             return saved;
         }
         return existing.get();
+    }
+
+    private void seedFeeData() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            if (feeHeadRepository.countBySchoolIdAndIsDeletedFalse(school.getId()) == 0) {
+                log.info("Seeding fee data for demo school...");
+
+                // 1. Fee Heads
+                FeeHead tuition = feeHeadRepository.save(FeeHead.builder()
+                        .name("Tuition Fee").description("Standard tuition fee").isMandatory(true).school(school)
+                        .build());
+                FeeHead transport = feeHeadRepository.save(FeeHead.builder()
+                        .name("Transport Fee").description("School bus fee").isMandatory(false).school(school).build());
+                FeeHead library = feeHeadRepository.save(FeeHead.builder()
+                        .name("Library Fee").description("Library access fee").isMandatory(true).school(school)
+                        .build());
+
+                // 2. Fee Group
+                FeeGroup stdGroup = feeGroupRepository.save(FeeGroup.builder()
+                        .name("Class 10 Standard Monthly").description("Monthly tuition and library fees")
+                        .school(school).build());
+
+                stdGroup.setFeeItems(List.of(
+                        FeeGroupItem.builder().feeGroup(stdGroup).feeHead(tuition).amount(new BigDecimal("5000.00"))
+                                .build(),
+                        FeeGroupItem.builder().feeGroup(stdGroup).feeHead(library).amount(new BigDecimal("500.00"))
+                                .build(),
+                        FeeGroupItem.builder().feeGroup(stdGroup).feeHead(transport).amount(new BigDecimal("2500.00"))
+                                .build()));
+                feeGroupRepository.save(stdGroup);
+
+                // 3. Allocations
+                classRoomRepository
+                        .findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A",
+                                school.getId(), "2024-25")
+                        .ifPresent(cls -> {
+                            feeAllocationRepository.save(FeeAllocation.builder()
+                                    .school(school).classRoom(cls).feeGroup(stdGroup).academicYear("2024-25").build());
+                            log.info("Allocated fees to Class 10-A");
+                        });
+            }
+        });
     }
 
     private String getRoleDescription(RoleName roleName) {

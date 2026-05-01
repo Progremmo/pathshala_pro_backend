@@ -1,5 +1,8 @@
 package com.pathshalapro.dto.notification;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import com.pathshalapro.entity.enums.NotificationType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -7,6 +10,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class NotificationRequest {
 
     @NotBlank(message = "Title is required")
