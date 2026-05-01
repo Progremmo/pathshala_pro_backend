@@ -7,23 +7,33 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
+import com.pathshalapro.security.UserPrincipal;
 
 /**
- * JPA Auditing configuration - provides current auditor for created_by/updated_by fields.
+ * JPA Auditing configuration - provides current auditor for
+ * created_by/updated_by fields.
  */
 @Configuration
+@SuppressWarnings("null")
 public class AuditConfig {
 
     @Bean
     public AuditorAware<Long> auditorAware() {
-        return () -> {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
-                return Optional.of(0L); // System/seed data
+        return new AuditorAware<Long>() {
+            @Override
+            public Optional<Long> getCurrentAuditor() {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+                if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+                    return Optional.of(0L); // System/seed data
+                }
+
+                if (auth.getPrincipal() instanceof UserPrincipal principal) {
+                    return Optional.of(principal.getId());
+                }
+
+                return Optional.of(0L);
             }
-            // In a real implementation, resolve user ID from the username
-            // For now, return a placeholder
-            return Optional.of(1L);
         };
     }
 }

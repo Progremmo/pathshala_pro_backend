@@ -129,13 +129,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                              HttpServletRequest request) {
+        Class<?> requiredType = ex.getRequiredType();
+        String typeName = requiredType != null ? requiredType.getSimpleName() : "unknown";
+
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")
                 .errorCode("TYPE_MISMATCH")
-                .message(String.format("Parameter '%s' should be of type '%s'.",
-                        ex.getName(), ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown"))
+                .message(String.format("Parameter '%s' should be of type '%s'.", ex.getName(), typeName))
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.badRequest().body(error);

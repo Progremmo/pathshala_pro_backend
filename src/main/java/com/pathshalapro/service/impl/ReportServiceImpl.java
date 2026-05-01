@@ -23,7 +23,6 @@ public class ReportServiceImpl {
     private final AttendanceRepository attendanceRepository;
     private final MarksRepository marksRepository;
     private final FeeInvoiceRepository feeInvoiceRepository;
-    private final UserRepository userRepository;
 
     /**
      * Student performance report: attendance + marks summary.

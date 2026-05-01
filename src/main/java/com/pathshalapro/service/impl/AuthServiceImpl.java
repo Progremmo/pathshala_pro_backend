@@ -41,6 +41,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -297,6 +298,7 @@ public class AuthServiceImpl implements AuthService {
                 .roles(roleNames)
                 .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
+                .classRoomId(user.getClassRoom() != null ? user.getClassRoom().getId() : null)
                 .expiresIn(86400L)
                 .build();
     }

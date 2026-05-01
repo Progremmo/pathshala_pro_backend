@@ -23,5 +23,6 @@ public class AuthResponse {
     private List<RoleName> roles;
     private Long schoolId;
     private String schoolName;
+    private Long classRoomId;
     private Long expiresIn; // in seconds
 }

@@ -29,6 +29,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class DataSeeder {
 
     private final RoleRepository roleRepository;

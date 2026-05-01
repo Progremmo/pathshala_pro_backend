@@ -3,7 +3,6 @@ package com.pathshalapro.service.impl;
 import com.pathshalapro.dto.school.SchoolRequest;
 import com.pathshalapro.dto.school.SchoolResponse;
 import com.pathshalapro.entity.School;
-import com.pathshalapro.entity.SubscriptionPlan;
 import com.pathshalapro.entity.SchoolSubscription;
 import com.pathshalapro.entity.enums.SubscriptionStatus;
 import com.pathshalapro.exception.ApiException;
