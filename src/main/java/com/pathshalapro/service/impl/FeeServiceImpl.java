@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class FeeServiceImpl {
 
     private final FeeStructureRepository feeStructureRepository;

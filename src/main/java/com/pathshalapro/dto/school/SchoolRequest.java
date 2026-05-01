@@ -2,8 +2,6 @@ package com.pathshalapro.dto.school;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
@@ -32,7 +30,5 @@ public class SchoolRequest {
     private String website;
     private String logoUrl;
     @JsonProperty("isActive")
-    @Getter(onMethod_ = {@JsonProperty("isActive")})
-    @Setter(onMethod_ = {@JsonProperty("isActive")})
     private boolean active = true;
 }

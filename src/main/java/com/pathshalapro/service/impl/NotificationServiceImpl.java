@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class NotificationServiceImpl {
 
     private final NotificationRepository notificationRepository;

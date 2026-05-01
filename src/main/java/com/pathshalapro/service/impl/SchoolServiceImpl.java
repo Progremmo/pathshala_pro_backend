@@ -24,6 +24,7 @@ import java.time.LocalDate;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SchoolServiceImpl {
 
     private final SchoolRepository schoolRepository;

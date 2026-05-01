@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SchoolConfigService {
 
     private final SchoolConfigRepository configRepository;

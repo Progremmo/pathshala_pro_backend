@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDate;
@@ -32,8 +30,6 @@ public class UserUpdateRequest {
     private LocalDate dateOfBirth;
     private String address;
     @JsonProperty("isActive")
-    @Getter(onMethod_ = {@JsonProperty("isActive")})
-    @Setter(onMethod_ = {@JsonProperty("isActive")})
     private Boolean active;
 
     // Student specific

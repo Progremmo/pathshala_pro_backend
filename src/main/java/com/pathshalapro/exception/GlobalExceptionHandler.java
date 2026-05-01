@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestControllerAdvice
+@SuppressWarnings("null")
 public class GlobalExceptionHandler {
 
     // ---- Custom API Exception ----
