@@ -200,6 +200,13 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.success(null, "Allocation created."));
     }
 
+    @GetMapping("/allocations")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
+    @Operation(summary = "Get all fee allocations for a school")
+    public ResponseEntity<ApiResponse<List<FeeAllocationResponse>>> getAllocations(@PathVariable Long schoolId) {
+        return ResponseEntity.ok(ApiResponse.success(feeService.getAllocations(schoolId)));
+    }
+
     @PostMapping("/generate-class-invoices")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN')")
     @Operation(summary = "Bulk generate invoices for a class")

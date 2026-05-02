@@ -203,6 +203,14 @@ public class FeeServiceImpl {
         feeStructureRepository.save(structure);
     }
 
+    @Transactional(readOnly = true)
+    public List<FeeAllocationResponse> getAllocations(Long schoolId) {
+        return feeAllocationRepository.findBySchoolIdAndIsDeletedFalse(schoolId)
+                .stream()
+                .map(this::mapToAllocationResponse)
+                .toList();
+    }
+
     // ---- Fee Invoice ----
 
     @Transactional
@@ -620,5 +628,27 @@ public class FeeServiceImpl {
 
             log.info("Notification sent for invoice: {}", invoice.getInvoiceNumber());
         }
+    }
+
+    private FeeAllocationResponse mapToAllocationResponse(FeeAllocation a) {
+        FeeAllocationResponse.FeeAllocationResponseBuilder builder = FeeAllocationResponse.builder()
+                .id(a.getId())
+                .groupId(a.getFeeGroup().getId())
+                .groupName(a.getFeeGroup().getName())
+                .academicYear(a.getAcademicYear())
+                .createdAt(a.getCreatedAt());
+
+        if (a.getClassRoom() != null) {
+            builder.classId(a.getClassRoom().getId())
+                    .className(a.getClassRoom().getName())
+                    .section(a.getClassRoom().getSection());
+        }
+
+        if (a.getStudent() != null) {
+            builder.studentId(a.getStudent().getId())
+                    .studentName(a.getStudent().getFirstName() + " " + a.getStudent().getLastName());
+        }
+
+        return builder.build();
     }
 }
