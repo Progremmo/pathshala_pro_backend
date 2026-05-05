@@ -59,4 +59,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     long countBySchoolIdAndDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
 
     long countByStudentIdAndIsDeletedFalse(Long studentId);
+
+    boolean existsByClassRoomIdAndAttendanceDateAndIsDeletedFalse(Long classRoomId, LocalDate date);
 }

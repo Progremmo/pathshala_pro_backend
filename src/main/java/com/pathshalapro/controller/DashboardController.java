@@ -2,6 +2,7 @@ package com.pathshalapro.controller;
 
 import com.pathshalapro.dto.ApiResponse;
 import com.pathshalapro.dto.dashboard.DashboardStatsResponse;
+import com.pathshalapro.dto.dashboard.TeacherDashboardResponse;
 import com.pathshalapro.service.impl.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,5 +27,14 @@ public class DashboardController {
     @Operation(summary = "Get school dashboard statistics")
     public ResponseEntity<ApiResponse<DashboardStatsResponse>> getDashboardStats(@PathVariable Long schoolId) {
         return ResponseEntity.ok(ApiResponse.success(dashboardService.getSchoolStats(schoolId)));
+    }
+
+    @GetMapping("/teacher/{teacherId}/stats")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'TEACHER')")
+    @Operation(summary = "Get teacher dashboard statistics")
+    public ResponseEntity<ApiResponse<TeacherDashboardResponse>> getTeacherDashboardStats(
+            @PathVariable Long schoolId,
+            @PathVariable Long teacherId) {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getTeacherStats(schoolId, teacherId)));
     }
 }

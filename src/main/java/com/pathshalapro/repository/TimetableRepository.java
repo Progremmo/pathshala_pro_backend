@@ -19,6 +19,8 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     List<Timetable> findBySchoolIdAndDayOfWeekAndIsDeletedFalse(Long schoolId, DayOfWeek dayOfWeek);
 
+    List<Timetable> findByTeacherIdAndDayOfWeekAndAcademicYearAndIsDeletedFalse(Long teacherId, DayOfWeek dayOfWeek, String academicYear);
+
     /**
      * Conflict detection: Check if teacher is already assigned in an overlapping slot.
      */

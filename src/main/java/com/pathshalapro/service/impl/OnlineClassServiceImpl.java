@@ -2,9 +2,17 @@ package com.pathshalapro.service.impl;
 
 import com.pathshalapro.dto.onlineclass.OnlineClassRequest;
 import com.pathshalapro.dto.onlineclass.OnlineClassResponse;
-import com.pathshalapro.entity.*;
+import com.pathshalapro.entity.ClassRoom;
+import com.pathshalapro.entity.OnlineClass;
+import com.pathshalapro.entity.School;
+import com.pathshalapro.entity.Subject;
+import com.pathshalapro.entity.User;
 import com.pathshalapro.exception.ApiException;
-import com.pathshalapro.repository.*;
+import com.pathshalapro.repository.ClassRoomRepository;
+import com.pathshalapro.repository.OnlineClassRepository;
+import com.pathshalapro.repository.SchoolRepository;
+import com.pathshalapro.repository.SubjectRepository;
+import com.pathshalapro.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -70,6 +78,11 @@ public class OnlineClassServiceImpl {
     @Transactional(readOnly = true)
     public Page<OnlineClassResponse> getClassesBySchool(Long schoolId, Pageable pageable) {
         return onlineClassRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable).map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OnlineClassResponse> getClassesByTeacher(Long teacherId, Pageable pageable) {
+        return onlineClassRepository.findByTeacherIdAndIsDeletedFalse(teacherId, pageable).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)

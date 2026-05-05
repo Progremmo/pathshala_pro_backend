@@ -16,4 +16,6 @@ public interface NotesRepository extends JpaRepository<Notes, Long> {
     Page<Notes> findBySchoolIdAndGradeAndIsVisibleTrueAndIsDeletedFalse(Long schoolId, String grade, Pageable pageable);
 
     Page<Notes> findByUploadedByIdAndIsDeletedFalse(Long teacherId, Pageable pageable);
+
+    long countByUploadedByIdAndIsDeletedFalse(Long teacherId);
 }

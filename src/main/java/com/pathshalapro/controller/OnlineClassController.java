@@ -51,6 +51,18 @@ public class OnlineClassController {
         return ResponseEntity.ok(ApiResponse.success(onlineClassService.getClassesBySchool(schoolId, pageable)));
     }
 
+    @GetMapping("/teacher/{teacherId}")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'TEACHER')")
+    @Operation(summary = "Get all online classes for a teacher")
+    public ResponseEntity<ApiResponse<Page<OnlineClassResponse>>> getTeacherClasses(
+            @PathVariable Long schoolId,
+            @PathVariable Long teacherId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "scheduledAt"));
+        return ResponseEntity.ok(ApiResponse.success(onlineClassService.getClassesByTeacher(teacherId, pageable)));
+    }
+
     @GetMapping("/upcoming")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
     @Operation(summary = "Get upcoming online classes (next N days)")
