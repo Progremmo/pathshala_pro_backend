@@ -6,6 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +18,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.pathshalapro.exception.ErrorResponse;
 
 import java.io.IOException;
 
@@ -56,10 +63,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Authenticated user: {}", userEmail);
                 }
             }
+            filterChain.doFilter(request, response);
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT token is expired: {}", e.getMessage());
+            handleException(response, request, "Token has expired. Please login again.", HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED");
+        } catch (JwtException e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+            handleException(response, request, "Invalid authentication token.", HttpStatus.UNAUTHORIZED, "INVALID_TOKEN");
         } catch (Exception e) {
-            log.error("JWT authentication failed: {}", e.getMessage());
+            log.error("JWT authentication system error: ", e);
+            handleException(response, request, "Authentication failed.", HttpStatus.UNAUTHORIZED, "AUTH_ERROR");
         }
+    }
 
-        filterChain.doFilter(request, response);
+    private void handleException(HttpServletResponse response, HttpServletRequest request, String message, HttpStatus status, String errorCode) throws IOException {
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .errorCode(errorCode)
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        response.getWriter().write(mapper.writeValueAsString(errorResponse));
     }
 }

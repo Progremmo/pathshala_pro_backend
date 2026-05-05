@@ -40,6 +40,7 @@ public class DataSeeder {
     private final FeeAllocationRepository feeAllocationRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
+    private final SystemSettingRepository systemSettingRepository;
 
     @Bean
     @Profile({ "default", "dev", "prod" })
@@ -53,6 +54,7 @@ public class DataSeeder {
             seedSchoolConfigs();
             seedDemoDataForSchool();
             seedFeeData();
+            seedSystemSettings();
             log.info("==== Data Seeder Completed ====");
         };
     }
@@ -68,6 +70,39 @@ public class DataSeeder {
             schoolConfigService.saveConfig(school.getId(), "EXAM_TYPES",
                     "{\"UNIT_TEST\":\"Unit Test\",\"MID_TERM\":\"Mid Term\",\"FINAL_TERM\":\"Final Term\",\"INTERNAL\":\"Internal\",\"PRACTICAL\":\"Practical\",\"QUIZ\":\"Quiz\",\"ASSIGNMENT\":\"Assignment\"}");
         });
+    }
+
+    private void seedSystemSettings() {
+        if (systemSettingRepository.count() == 0) {
+            log.info("Seeding platform-wide system settings...");
+            List<SystemSetting> settings = List.of(
+                    // General
+                    SystemSetting.builder().configKey("PLATFORM_NAME").configValue("PathshalaPro").configGroup("GENERAL")
+                            .description("Name of the platform").build(),
+                    SystemSetting.builder().configKey("SUPPORT_EMAIL").configValue("support@pathshalapro.com")
+                            .configGroup("GENERAL").description("Primary support email address").build(),
+                    SystemSetting.builder().configKey("CONTACT_PHONE").configValue("+91 9795384656")
+                            .configGroup("GENERAL").description("Primary contact phone number").build(),
+                    SystemSetting.builder().configKey("BASE_CURRENCY").configValue("INR").configGroup("GENERAL")
+                            .description("Base currency for the platform").build(),
+
+                    // Email (SMTP)
+                    SystemSetting.builder().configKey("SMTP_HOST").configValue("smtp.gmail.com").configGroup("EMAIL")
+                            .description("SMTP server host").build(),
+                    SystemSetting.builder().configKey("SMTP_PORT").configValue("465").configGroup("EMAIL")
+                            .description("SMTP server port").build(),
+                    SystemSetting.builder().configKey("SMTP_USERNAME").configValue("noreply@pathshalapro.com")
+                            .configGroup("EMAIL").description("SMTP username").build(),
+
+                    // Security
+                    SystemSetting.builder().configKey("ENABLE_MFA").configValue("false").configGroup("SECURITY")
+                            .description("Enable Multi-Factor Authentication platform-wide").build(),
+                    SystemSetting.builder().configKey("MAX_LOGIN_ATTEMPTS").configValue("5").configGroup("SECURITY")
+                            .description("Maximum failed login attempts before lockout").build()
+            );
+            systemSettingRepository.saveAll(settings);
+            log.info("Seeded {} system settings.", settings.size());
+        }
     }
 
     private void seedRoles() {
