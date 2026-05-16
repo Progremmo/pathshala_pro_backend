@@ -105,6 +105,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Apache POI - Excel file processing for bulk uploads -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- Dotenv - reads .env files for secrets management -->
         <dependency>
             <groupId>me.paulschwarz</groupId>

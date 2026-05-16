@@ -13,6 +13,8 @@ import com.pathshalapro.repository.OtpRepository;
 import com.pathshalapro.repository.RoleRepository;
 import com.pathshalapro.repository.SchoolRepository;
 import com.pathshalapro.repository.UserRepository;
+import com.pathshalapro.repository.ClassRoomRepository;
+import com.pathshalapro.entity.ClassRoom;
 import com.pathshalapro.security.JwtTokenProvider;
 import com.pathshalapro.service.AuthService;
 import com.pathshalapro.service.EmailService;
@@ -53,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserDetailsService userDetailsService;
     private final OtpRepository otpRepository;
     private final EmailService emailService;
+    private final ClassRoomRepository classRoomRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.server-url}")
     private String serverUrl;
@@ -118,6 +121,19 @@ public class AuthServiceImpl implements AuthService {
             plainPassword = RandomStringUtils.randomAlphanumeric(8) + "1aA@";
         }
 
+        // STUDENT-specific validations: admissionNo and classRoomId are mandatory
+        ClassRoom classRoom = null;
+        if (request.getRole() == RoleName.STUDENT) {
+            if (request.getAdmissionNo() == null || request.getAdmissionNo().isBlank()) {
+                throw ApiException.badRequest("Admission number is required for students.");
+            }
+            if (request.getClassRoomId() == null) {
+                throw ApiException.badRequest("Classroom assignment is required for students.");
+            }
+            classRoom = classRoomRepository.findByIdAndIsDeletedFalse(request.getClassRoomId())
+                    .orElseThrow(() -> ApiException.notFound("Classroom not found with ID: " + request.getClassRoomId()));
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -129,6 +145,7 @@ public class AuthServiceImpl implements AuthService {
                 .dateOfBirth(request.getDateOfBirth())
                 .address(request.getAddress())
                 .admissionNo(request.getAdmissionNo())
+                .classRoom(classRoom)
                 .employeeId(request.getEmployeeId())
                 .qualification(request.getQualification())
                 .joiningDate(request.getJoiningDate())
