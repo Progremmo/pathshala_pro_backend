@@ -52,8 +52,9 @@ public class BulkUploadController {
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.contains("spreadsheet") && !contentType.contains("excel")
-                && !file.getOriginalFilename().endsWith(".xlsx") && !file.getOriginalFilename().endsWith(".xls")) {
+        String filename = file.getOriginalFilename();
+        if (contentType == null || (!contentType.contains("spreadsheet") && !contentType.contains("excel")
+                && (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))))) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Invalid file type. Please upload an Excel file (.xlsx or .xls)."));
         }

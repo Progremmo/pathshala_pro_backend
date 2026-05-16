@@ -100,6 +100,14 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public java.util.List<UserResponse> getChildrenByParentId(Long parentId) {
+        return userRepository.findChildrenByParentId(parentId)
+                .stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())

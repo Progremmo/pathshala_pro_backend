@@ -201,6 +201,9 @@ public class SchoolExcelParser {
                             .build();
 
                     School savedSchool = schoolRepository.save(school);
+                    if (savedSchool == null) {
+                        throw new RuntimeException("Failed to save school");
+                    }
 
                     // Auto-assign TRIAL subscription
                     planRepository.findByIsActiveTrueAndIsDeletedFalse().stream().findFirst()
@@ -269,8 +272,8 @@ public class SchoolExcelParser {
     private String getCellString(Row row, int col) {
         Cell cell = row.getCell(col);
         if (cell == null) return null;
-        cell.setCellType(CellType.STRING);
-        String val = cell.getStringCellValue();
+        DataFormatter formatter = new DataFormatter();
+        String val = formatter.formatCellValue(cell);
         return (val != null && !val.trim().isEmpty()) ? val.trim() : null;
     }
 }

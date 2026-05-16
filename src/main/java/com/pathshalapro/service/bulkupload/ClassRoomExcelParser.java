@@ -136,8 +136,8 @@ public class ClassRoomExcelParser {
     private String getCellString(Row row, int col) {
         Cell cell = row.getCell(col);
         if (cell == null) return null;
-        cell.setCellType(CellType.STRING);
-        String val = cell.getStringCellValue();
+        DataFormatter formatter = new DataFormatter();
+        String val = formatter.formatCellValue(cell);
         return (val != null && !val.trim().isEmpty()) ? val.trim() : null;
     }
 }

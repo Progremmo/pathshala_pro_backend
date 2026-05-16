@@ -47,6 +47,9 @@ public class BulkUploadService {
      */
     @Transactional
     public ExcelUploadResult processUpload(Long schoolId, String module, InputStream inputStream) {
+        if (schoolId == null) {
+            throw new IllegalArgumentException("schoolId must not be null");
+        }
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new RuntimeException("School not found with ID: " + schoolId));
 
