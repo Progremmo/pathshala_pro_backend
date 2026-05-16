@@ -38,6 +38,7 @@ public class DataSeeder {
     private final FeeHeadRepository feeHeadRepository;
     private final FeeGroupRepository feeGroupRepository;
     private final FeeAllocationRepository feeAllocationRepository;
+    private final TimetableRepository timetableRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
     private final SystemSettingRepository systemSettingRepository;
@@ -55,6 +56,7 @@ public class DataSeeder {
             seedDemoDataForSchool();
             seedFeeData();
             seedSystemSettings();
+            seedTimetable2026();
             log.info("==== Data Seeder Completed ====");
         };
     }
@@ -403,5 +405,151 @@ public class DataSeeder {
             case STUDENT -> "Student with access to their own data, notes, and results.";
             case PARENT -> "Parent with read-only access to their child's data.";
         };
+    }
+
+    // ======================== TIMETABLE SEEDER 2026-27 ========================
+
+    private void seedTimetable2026() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            // Skip if timetable data already exists for 2026-27
+            List<Timetable> existing = timetableRepository
+                    .findBySchoolIdAndDayOfWeekAndIsDeletedFalse(school.getId(), DayOfWeek.MONDAY);
+            boolean has2026 = existing.stream().anyMatch(t -> "2026-27".equals(t.getAcademicYear()));
+            if (has2026) {
+                log.info("Timetable for 2026-27 already seeded. Skipping.");
+                return;
+            }
+
+            log.info("Seeding timetable data for 2026-27...");
+
+            // 1. Classrooms for 2026-27
+            ClassRoom c10A = seedClassRoom(school, "Class 10", "A", "10", "2026-27");
+            ClassRoom c10B = seedClassRoom(school, "Class 10", "B", "10", "2026-27");
+            ClassRoom c9A  = seedClassRoom(school, "Class 9",  "A", "9",  "2026-27");
+
+            // 2. Subjects (grade 10 + grade 9) — idempotent via code lookup
+            Subject math   = seedSubject(school, "Mathematics",      "MATH101",  "10");
+            Subject sci    = seedSubject(school, "Science",           "SCI101",   "10");
+            Subject eng    = seedSubject(school, "English",           "ENG101",   "10");
+            Subject hindi  = seedSubject(school, "Hindi",             "HIN101",   "10");
+            Subject sst    = seedSubject(school, "Social Studies",    "SST101",   "10");
+            Subject cs     = seedSubject(school, "Computer Science",  "CS101",    "10");
+            Subject math9  = seedSubject(school, "Mathematics",       "MATH901",  "9");
+            Subject sci9   = seedSubject(school, "Science",           "SCI901",   "9");
+            Subject eng9   = seedSubject(school, "English",           "ENG901",   "9");
+            Subject hist9  = seedSubject(school, "History",           "HIST901",  "9");
+
+            // 3. Teachers — reuse existing + seed more
+            User teacher1 = seedUser(school, "John",    "Doe",     "teacher@demo.com",     RoleName.TEACHER); // Math & CS
+            User teacher2 = seedUser(school, "Priya",   "Sharma",  "priya@demo.com",       RoleName.TEACHER); // Science
+            User teacher3 = seedUser(school, "Rahul",   "Verma",   "rahul@demo.com",       RoleName.TEACHER); // English & Hindi
+            User teacher4 = seedUser(school, "Sneha",   "Gupta",   "sneha@demo.com",       RoleName.TEACHER); // SST & History
+
+            // 4. Period timings (8 periods, 40 min each, with breaks)
+            LocalTime[][] periods = {
+                { LocalTime.of(8, 0),  LocalTime.of(8, 40)  },  // Period 1
+                { LocalTime.of(8, 40), LocalTime.of(9, 20)  },  // Period 2
+                { LocalTime.of(9, 20), LocalTime.of(10, 0)  },  // Period 3
+                { LocalTime.of(10, 15),LocalTime.of(10, 55) },  // Period 4 (after break)
+                { LocalTime.of(10, 55),LocalTime.of(11, 35) },  // Period 5
+                { LocalTime.of(11, 35),LocalTime.of(12, 15) },  // Period 6
+                { LocalTime.of(13, 0), LocalTime.of(13, 40) },  // Period 7 (after lunch)
+                { LocalTime.of(13, 40),LocalTime.of(14, 20) },  // Period 8
+            };
+
+            DayOfWeek[] weekDays = {
+                DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY
+            };
+
+            // 5. Class 10-A timetable (subject rotation per day)
+            Subject[][] schedule10A = {
+                // Mon:     Math,  Eng,  Sci,  Hindi, CS,   SST,   Math,  Sci
+                { math, eng, sci, hindi, cs, sst, math, sci },
+                // Tue:     Eng,   Math, Hindi, Sci,  SST,  CS,    Eng,   Math
+                { eng, math, hindi, sci, sst, cs, eng, math },
+                // Wed:     Sci,   Hindi, Math, CS,  Eng,   Math,  SST,   Hindi
+                { sci, hindi, math, cs, eng, math, sst, hindi },
+                // Thu:     Hindi, Sci,  Eng,  Math, Math,  CS,    Sci,   SST
+                { hindi, sci, eng, math, math, cs, sci, sst },
+                // Fri:     CS,    Math, SST,  Eng,  Sci,   Hindi, Math,  Eng
+                { cs, math, sst, eng, sci, hindi, math, eng },
+                // Sat:     Math,  SST,  Sci,  Eng,  Hindi, Math,  CS,    Sci
+                { math, sst, sci, eng, hindi, math, cs, sci },
+            };
+
+            // 6. Class 10-B timetable (different rotation)
+            Subject[][] schedule10B = {
+                { sci, math, eng, cs, hindi, math, sst, eng },
+                { math, sci, cs, eng, math, hindi, eng, sst },
+                { eng, cs, sci, math, sst, hindi, math, sci },
+                { cs, eng, math, hindi, sci, sst, hindi, math },
+                { hindi, math, eng, sst, cs, sci, eng, math },
+                { sst, hindi, math, sci, eng, cs, sci, math },
+            };
+
+            // 7. Class 9-A timetable
+            Subject[][] schedule9A = {
+                { math9, eng9, sci9, hist9, math9, sci9, eng9, hist9 },
+                { sci9, math9, hist9, eng9, sci9, math9, hist9, eng9 },
+                { eng9, hist9, math9, sci9, eng9, hist9, math9, sci9 },
+                { hist9, sci9, eng9, math9, hist9, eng9, sci9, math9 },
+                { math9, eng9, hist9, sci9, math9, eng9, sci9, hist9 },
+                { sci9, hist9, eng9, math9, sci9, math9, eng9, hist9 },
+            };
+
+            // Teacher assignment map for grade 10
+            // math->teacher1, sci->teacher2, eng->teacher3, hindi->teacher3, sst->teacher4, cs->teacher1
+            java.util.Map<Long, User> teacherMap10 = java.util.Map.of(
+                math.getId(), teacher1,
+                sci.getId(),  teacher2,
+                eng.getId(),  teacher3,
+                hindi.getId(),teacher3,
+                sst.getId(),  teacher4,
+                cs.getId(),   teacher1
+            );
+
+            // Teacher assignment for grade 9
+            // math9->teacher1, sci9->teacher2, eng9->teacher3, hist9->teacher4
+            java.util.Map<Long, User> teacherMap9 = java.util.Map.of(
+                math9.getId(), teacher1,
+                sci9.getId(),  teacher2,
+                eng9.getId(),  teacher3,
+                hist9.getId(), teacher4
+            );
+
+            // Seed the three timetables
+            seedClassTimetable(school, c10A, schedule10A, weekDays, periods, teacherMap10, "2026-27");
+            seedClassTimetable(school, c10B, schedule10B, weekDays, periods, teacherMap10, "2026-27");
+            seedClassTimetable(school, c9A,  schedule9A,  weekDays, periods, teacherMap9,  "2026-27");
+
+            log.info("Seeded full timetable for 2026-27: 3 classrooms × 6 days × 8 periods = {} entries",
+                    3 * 6 * 8);
+        });
+    }
+
+    private void seedClassTimetable(School school, ClassRoom classRoom, Subject[][] schedule,
+                                     DayOfWeek[] weekDays, LocalTime[][] periods,
+                                     java.util.Map<Long, User> teacherMap, String academicYear) {
+        for (int d = 0; d < weekDays.length; d++) {
+            for (int p = 0; p < periods.length; p++) {
+                Subject subject = schedule[d][p];
+                User teacher = teacherMap.get(subject.getId());
+                if (teacher == null) continue;
+
+                Timetable tt = Timetable.builder()
+                        .school(school)
+                        .classRoom(classRoom)
+                        .subject(subject)
+                        .teacher(teacher)
+                        .dayOfWeek(weekDays[d])
+                        .startTime(periods[p][0])
+                        .endTime(periods[p][1])
+                        .periodNumber(p + 1)
+                        .academicYear(academicYear)
+                        .build();
+                timetableRepository.save(tt);
+            }
+        }
     }
 }
