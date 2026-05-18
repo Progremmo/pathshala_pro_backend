@@ -189,8 +189,27 @@ public class StudentExcelParser {
 
                     // Link parent if provided
                     if (parentEmail != null && !parentEmail.isBlank()) {
-                        userRepository.findByEmailAndIsDeletedFalse(parentEmail.trim().toLowerCase())
-                                .ifPresent(builder::parent);
+                        String pEmail = parentEmail.trim().toLowerCase();
+                        var parentOpt = userRepository.findByEmailAndIsDeletedFalse(pEmail);
+                        if (parentOpt.isPresent()) {
+                            builder.parent(parentOpt.get());
+                        } else {
+                            // Create new parent account
+                            Role parentRole = roleRepository.findByName(RoleName.PARENT)
+                                    .orElseThrow(() -> new RuntimeException("PARENT role not found"));
+                            User newParent = User.builder()
+                                    .firstName("Parent")
+                                    .lastName(lastName.trim())
+                                    .email(pEmail)
+                                    .password(passwordEncoder.encode("Welcome@123"))
+                                    .isActive(true)
+                                    .isEmailVerified(false)
+                                    .school(school)
+                                    .roles(List.of(parentRole))
+                                    .build();
+                            User savedParent = userRepository.save(newParent);
+                            builder.parent(savedParent);
+                        }
                     }
 
                     userRepository.save(builder.build());

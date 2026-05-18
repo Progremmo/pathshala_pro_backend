@@ -134,6 +134,13 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> ApiException.notFound("Classroom not found with ID: " + request.getClassRoomId()));
         }
 
+        // Handle Parent linkage
+        User parent = null;
+        if (request.getParentId() != null) {
+            parent = userRepository.findByIdAndIsDeletedFalse(request.getParentId())
+                    .orElseThrow(() -> ApiException.notFound("Parent not found with ID: " + request.getParentId()));
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -146,6 +153,7 @@ public class AuthServiceImpl implements AuthService {
                 .address(request.getAddress())
                 .admissionNo(request.getAdmissionNo())
                 .classRoom(classRoom)
+                .parent(parent)
                 .employeeId(request.getEmployeeId())
                 .qualification(request.getQualification())
                 .joiningDate(request.getJoiningDate())
