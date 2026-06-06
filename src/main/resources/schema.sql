@@ -1,5 +1,5 @@
 -- ============================================================
--- PathshalaPro - Complete MySQL Schema
+-- PathshalaPro - Complete PostgreSQL Schema
 -- Database: pathshalapro_db
 -- Version: 1.0.0
 -- ============================================================
