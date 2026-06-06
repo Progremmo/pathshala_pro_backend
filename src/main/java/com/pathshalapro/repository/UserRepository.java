@@ -48,8 +48,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findBySchoolIdAndIsActiveTrueAndIsDeletedFalse(Long schoolId, Pageable pageable);
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE u.school.id = :schoolId AND r.name = :roleName " +
-           "AND (LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))) AND u.isDeleted = false")
+           "AND (LOWER(u.firstName) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%')) " +
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%'))) AND u.isDeleted = false")
     Page<User> searchBySchoolAndRole(@Param("schoolId") Long schoolId,
                                       @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
                                       @Param("search") String search,
@@ -57,9 +57,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u JOIN u.roles r WHERE " +
            "(:roleName IS NULL OR r.name = :roleName) AND " +
            "(:schoolId IS NULL OR u.school.id = :schoolId) AND " +
-           "(:search IS NULL OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(CAST(:search AS String) IS NULL OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%')) " +
+           "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%')) " +
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:search AS String), '%'))) AND " +
            "u.isDeleted = false")
     Page<User> searchUsers(@Param("roleName") com.pathshalapro.entity.enums.RoleName roleName,
                            @Param("schoolId") Long schoolId,
