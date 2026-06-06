@@ -54,7 +54,7 @@ pathshalapro/
 │       └── GlobalExceptionHandler.java
 └── src/main/resources/
     ├── application.properties
-    └── schema.sql                      ← Full MySQL DDL
+    └── schema.sql                      ← Full PostgreSQL DDL
 ```
 
 ---
@@ -64,7 +64,7 @@ pathshalapro/
 ### 1. Prerequisites
 - Java 17+
 - Maven 3.8+ (`JAVA_HOME` must be set)
-- MySQL 8.0+
+- PostgreSQL 12+
 
 ### 2. Database Setup
 ```sql
@@ -74,7 +74,7 @@ Or run `schema.sql` directly.
 
 ### 3. Configure `application.properties`
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/pathshalapro_db?...
+spring.datasource.url=jdbc:postgresql://localhost:5432/pathshalapro_db?...
 spring.datasource.username=root
 spring.datasource.password=YOUR_PASSWORD
 
