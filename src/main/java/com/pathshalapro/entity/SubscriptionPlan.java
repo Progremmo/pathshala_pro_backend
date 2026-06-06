@@ -2,6 +2,8 @@ package com.pathshalapro.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 
@@ -47,7 +49,8 @@ public class SubscriptionPlan extends BaseEntity {
     @Column(name = "storage_gb")
     private Integer storageGb;
 
-    @Column(name = "features", columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "features", columnDefinition = "JSONB")
     private String features; // JSON array of feature flags
 
     @Builder.Default
