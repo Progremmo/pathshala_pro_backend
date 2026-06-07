@@ -30,6 +30,8 @@ public interface FeeInvoiceRepository extends JpaRepository<FeeInvoice, Long> {
 
     List<FeeInvoice> findByStudentIdAndPaymentStatusAndIsDeletedFalse(Long studentId, PaymentStatus status);
 
+    List<FeeInvoice> findByPaymentStatusNotAndIsDeletedFalse(PaymentStatus status);
+
     List<FeeInvoice> findBySchoolIdAndDueDateBeforeAndPaymentStatusNotAndIsDeletedFalse(
             Long schoolId, LocalDate date, PaymentStatus status);
 

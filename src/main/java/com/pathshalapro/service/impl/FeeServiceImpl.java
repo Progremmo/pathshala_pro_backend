@@ -50,6 +50,12 @@ public class FeeServiceImpl {
     private final ClassRoomRepository classRoomRepository;
     private final RazorpayClient razorpayClient;
 
+    private final FeeInstallmentPlanRepository feeInstallmentPlanRepository;
+    private final AdvanceCreditRepository advanceCreditRepository;
+    private final StudentFeeConcessionRepository studentFeeConcessionRepository;
+    private final LateFeeRuleRepository lateFeeRuleRepository;
+    private final FeeAuditLogRepository feeAuditLogRepository;
+
     @Value("${razorpay.key.secret}")
     private String razorpaySecret;
 
@@ -433,6 +439,8 @@ public class FeeServiceImpl {
         for (User student : classRoom.getStudents()) {
             if (student.isDeleted()) continue;
 
+            List<StudentFeeConcession> concessions = studentFeeConcessionRepository.findByStudentId(student.getId());
+
             for (FeeAllocation allocation : allocations) {
                 FeeGroup group = allocation.getFeeGroup();
                 
@@ -446,14 +454,54 @@ public class FeeServiceImpl {
                         .map(FeeGroupItem::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+                // Calculate Concession
+                BigDecimal discount = BigDecimal.ZERO;
+                for (StudentFeeConcession concession : concessions) {
+                    if (concession.getFeeHead() == null) {
+                        // Applies to total amount
+                        if ("PERCENTAGE".equalsIgnoreCase(concession.getDiscountType())) {
+                            discount = discount.add(totalAmount.multiply(concession.getValue()).divide(BigDecimal.valueOf(100)));
+                        } else {
+                            discount = discount.add(concession.getValue());
+                        }
+                    }
+                }
+                
+                if (discount.compareTo(totalAmount) > 0) {
+                    discount = totalAmount; // Cap discount
+                }
+
+                BigDecimal netAmount = totalAmount.subtract(discount);
+                BigDecimal paidAmount = BigDecimal.ZERO;
+                PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+                // Consume Advance Credit
+                AdvanceCredit advanceCredit = advanceCreditRepository.findByStudentId(student.getId()).orElse(null);
+                if (advanceCredit != null && advanceCredit.getCreditAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    if (advanceCredit.getCreditAmount().compareTo(netAmount) >= 0) {
+                        // Fully paid by advance
+                        advanceCredit.setCreditAmount(advanceCredit.getCreditAmount().subtract(netAmount));
+                        paidAmount = netAmount;
+                        paymentStatus = PaymentStatus.PAID;
+                    } else {
+                        // Partially paid
+                        paidAmount = advanceCredit.getCreditAmount();
+                        advanceCredit.setCreditAmount(BigDecimal.ZERO);
+                        paymentStatus = PaymentStatus.PARTIAL;
+                    }
+                    advanceCreditRepository.save(advanceCredit);
+                }
+
                 String invoiceNumber = generateInvoiceNumber(schoolId);
 
                 FeeInvoice invoice = FeeInvoice.builder()
                         .invoiceNumber(invoiceNumber)
                         .totalAmount(totalAmount)
-                        .netAmount(totalAmount)
-                        .paidAmount(BigDecimal.ZERO)
-                        .paymentStatus(PaymentStatus.PENDING)
+                        .discountAmount(discount)
+                        .fineAmount(BigDecimal.ZERO)
+                        .netAmount(netAmount)
+                        .paidAmount(paidAmount)
+                        .paymentStatus(paymentStatus)
                         .dueDate(dueDate)
                         .periodMonth(month)
                         .periodYear(year)
@@ -475,6 +523,17 @@ public class FeeServiceImpl {
                 
                 savedInvoice.setItems(items);
                 feeInvoiceRepository.save(savedInvoice);
+
+                // Audit Log
+                FeeAuditLog auditLog = FeeAuditLog.builder()
+                        .entityType("INVOICE")
+                        .entityId(savedInvoice.getId())
+                        .action("CREATED")
+                        .changedBy(1L) // System/Admin user
+                        .school(classRoom.getSchool())
+                        .newState("Invoice generated for " + netAmount)
+                        .build();
+                feeAuditLogRepository.save(auditLog);
             }
         }
     }

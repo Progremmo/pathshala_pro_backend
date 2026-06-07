@@ -83,6 +83,10 @@ public class FeeInvoice extends BaseEntity {
     @JoinColumn(name = "fee_structure_id")
     private FeeStructure feeStructure;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fee_installment_id")
+    private FeeInstallment feeInstallment;
+
     @Builder.Default
     @OneToMany(mappedBy = "feeInvoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FeeInvoiceItem> items = new ArrayList<>();

@@ -142,6 +142,9 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.success(orderDetails, "Order created. Proceed with payment."));
     }
 
+    private final com.pathshalapro.service.impl.PdfGeneratorService pdfGeneratorService;
+    private final com.pathshalapro.repository.PaymentRepository paymentRepository;
+
     @PostMapping("/payment/verify")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
     @Operation(summary = "Verify Razorpay payment",
@@ -151,6 +154,26 @@ public class FeeController {
             @Valid @RequestBody PaymentVerifyRequest request) {
         PaymentResponse payment = feeService.verifyPayment(request);
         return ResponseEntity.ok(ApiResponse.success(payment, "Payment verified successfully."));
+    }
+
+    @GetMapping("/payment/{paymentId}/receipt")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
+    @Operation(summary = "Download Payment Receipt PDF")
+    public ResponseEntity<byte[]> downloadReceipt(
+            @PathVariable Long schoolId,
+            @PathVariable Long paymentId) {
+        com.pathshalapro.entity.Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> com.pathshalapro.exception.ApiException.notFound("Payment not found"));
+
+        if (!payment.getSchool().getId().equals(schoolId)) {
+            throw com.pathshalapro.exception.ApiException.forbidden("Access denied");
+        }
+
+        byte[] pdfBytes = pdfGeneratorService.generatePaymentReceipt(payment);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt_" + payment.getReceiptNumber() + ".pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdfBytes);
     }
 
     // ---- New Fee Management (Standard Way) ----
