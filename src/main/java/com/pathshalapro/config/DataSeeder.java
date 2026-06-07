@@ -43,6 +43,17 @@ public class DataSeeder {
     private final com.pathshalapro.service.SchoolConfigService schoolConfigService;
     private final SystemSettingRepository systemSettingRepository;
 
+    private final LateFeeRuleRepository lateFeeRuleRepository;
+    private final FeeInstallmentPlanRepository feeInstallmentPlanRepository;
+    private final AdvanceCreditRepository advanceCreditRepository;
+    private final StudentFeeConcessionRepository studentFeeConcessionRepository;
+    private final FeeInvoiceRepository feeInvoiceRepository;
+    private final PaymentRepository paymentRepository;
+    private final MarksRepository marksRepository;
+    private final NotesRepository notesRepository;
+    private final AnnouncementRepository announcementRepository;
+    private final OnlineClassRepository onlineClassRepository;
+
     @Bean
     @Profile({ "default", "dev", "prod" })
     public CommandLineRunner seedData() {
@@ -55,8 +66,10 @@ public class DataSeeder {
             seedSchoolConfigs();
             seedDemoDataForSchool();
             seedFeeData();
+            seedEnhancedFeeData();
             seedSystemSettings();
             seedTimetable2026();
+            seedOtherModulesData();
             log.info("==== Data Seeder Completed ====");
         };
     }
@@ -236,6 +249,13 @@ public class DataSeeder {
             User student3 = seedUser(school, "Charlie", "Brown", "charlie@demo.com", RoleName.STUDENT);
 
             // Assign students to classrooms
+            userRepository.findByEmailAndIsDeletedFalse("student@demo.com").ifPresent(mainStudent -> {
+                assignStudentToClass(mainStudent, class10A);
+                userRepository.findByEmailAndIsDeletedFalse("parent@demo.com").ifPresent(parent -> {
+                    mainStudent.setParent(parent);
+                    userRepository.save(mainStudent);
+                });
+            });
             assignStudentToClass(student1, class10A);
             assignStudentToClass(student2, class10A);
             assignStudentToClass(student3, class10B);
@@ -551,5 +571,194 @@ public class DataSeeder {
                 timetableRepository.save(tt);
             }
         }
+    }
+    private void seedEnhancedFeeData() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            log.info("Seeding enhanced fee data (MVP+) for demo school...");
+
+            // 1. Late Fee Rules
+            if (lateFeeRuleRepository.findBySchoolId(school.getId()).isEmpty()) {
+                lateFeeRuleRepository.save(LateFeeRule.builder()
+                        .school(school).ruleType("FIXED").ruleValue(new BigDecimal("100.00")).gracePeriodDays(5).build());
+                lateFeeRuleRepository.save(LateFeeRule.builder()
+                        .school(school).ruleType("PERCENTAGE").ruleValue(new BigDecimal("2.00")).gracePeriodDays(15).build());
+                log.info("Seeded Late Fee Rules.");
+            }
+
+            // 2. Installment Plans
+            if (feeInstallmentPlanRepository.findBySchoolIdAndAcademicYear(school.getId(), "2024-25").isEmpty()) {
+                FeeInstallmentPlan plan = FeeInstallmentPlan.builder()
+                        .school(school).name("Annual Standard Split").totalAmount(new BigDecimal("60000.00"))
+                        .academicYear("2024-25").build();
+                
+                plan.setInstallments(List.of(
+                        FeeInstallment.builder().feeInstallmentPlan(plan).installmentNumber(1).amount(new BigDecimal("15000.00")).dueDate(LocalDate.of(2024, 4, 15)).build(),
+                        FeeInstallment.builder().feeInstallmentPlan(plan).installmentNumber(2).amount(new BigDecimal("15000.00")).dueDate(LocalDate.of(2024, 7, 15)).build(),
+                        FeeInstallment.builder().feeInstallmentPlan(plan).installmentNumber(3).amount(new BigDecimal("15000.00")).dueDate(LocalDate.of(2024, 10, 15)).build(),
+                        FeeInstallment.builder().feeInstallmentPlan(plan).installmentNumber(4).amount(new BigDecimal("15000.00")).dueDate(LocalDate.of(2025, 1, 15)).build()
+                ));
+                feeInstallmentPlanRepository.save(plan);
+                log.info("Seeded Fee Installment Plans.");
+            }
+
+            // 3. Concessions & Advance Credit
+            userRepository.findByEmailAndIsDeletedFalse("student@demo.com").ifPresent(student -> {
+                if (studentFeeConcessionRepository.findByStudentId(student.getId()).isEmpty()) {
+                    studentFeeConcessionRepository.save(StudentFeeConcession.builder()
+                            .student(student).discountType("PERCENTAGE").value(new BigDecimal("50.00"))
+                            .reason("Staff Child Concession").build());
+                    log.info("Seeded Student Fee Concession for student@demo.com.");
+                }
+
+                if (advanceCreditRepository.findByStudentId(student.getId()).isEmpty()) {
+                    advanceCreditRepository.save(AdvanceCredit.builder()
+                            .student(student).creditAmount(new BigDecimal("10000.00")).build());
+                    log.info("Seeded Advance Credit for student@demo.com.");
+                }
+
+                // 4. Invoices (Pending, Partial, Paid)
+                if (feeInvoiceRepository.findByStudentIdAndIsDeletedFalse(student.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
+                    // Create an overdue pending invoice
+                    FeeInvoice overdueInvoice = FeeInvoice.builder()
+                            .school(school).student(student).invoiceNumber("INV-DEMO-001")
+                            .totalAmount(new BigDecimal("5000.00")).netAmount(new BigDecimal("5000.00"))
+                            .paidAmount(BigDecimal.ZERO).paymentStatus(PaymentStatus.PENDING)
+                            .dueDate(LocalDate.now().minusDays(10)).periodMonth(4).periodYear(2026).academicYear("2026-27").remarks("Overdue Tuition").build();
+                    feeInvoiceRepository.save(overdueInvoice);
+
+                    // Create a paid invoice
+                    FeeInvoice paidInvoice = FeeInvoice.builder()
+                            .school(school).student(student).invoiceNumber("INV-DEMO-002")
+                            .totalAmount(new BigDecimal("5000.00")).netAmount(new BigDecimal("5000.00"))
+                            .paidAmount(new BigDecimal("5000.00")).paymentStatus(PaymentStatus.PAID)
+                            .dueDate(LocalDate.now().minusDays(40)).periodMonth(3).periodYear(2026).academicYear("2026-27").remarks("Paid Tuition").build();
+                    paidInvoice = feeInvoiceRepository.save(paidInvoice);
+
+                    // Add a payment for the paid invoice
+                    paymentRepository.save(Payment.builder()
+                            .school(school).feeInvoice(paidInvoice).paidBy(student)
+                            .amount(new BigDecimal("5000.00")).currency("INR")
+                            .status(PaymentStatus.PAID).paymentMethod("ONLINE")
+                            .razorpayOrderId("order_demo_123").razorpayPaymentId("pay_demo_123").razorpaySignature("demo_sig")
+                            .receiptNumber("REC-DEMO-002").paymentDate(java.time.LocalDateTime.now().minusDays(38))
+                            .build());
+
+                    log.info("Seeded Sample Invoices and Payments for student@demo.com.");
+                }
+            });
+
+            // Seed fees for Alice
+            userRepository.findByEmailAndIsDeletedFalse("alice@demo.com").ifPresent(alice -> {
+                if (feeInvoiceRepository.findByStudentIdAndIsDeletedFalse(alice.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
+                    FeeInvoice pendingInvoice = FeeInvoice.builder()
+                            .school(school).student(alice).invoiceNumber("INV-DEMO-ALICE")
+                            .totalAmount(new BigDecimal("4500.00")).netAmount(new BigDecimal("4500.00"))
+                            .paidAmount(BigDecimal.ZERO).paymentStatus(PaymentStatus.PENDING)
+                            .dueDate(LocalDate.now().plusDays(5)).periodMonth(4).periodYear(2026).academicYear("2026-27").remarks("Upcoming Tuition").build();
+                    feeInvoiceRepository.save(pendingInvoice);
+                }
+            });
+        });
+    }
+
+    private void seedOtherModulesData() {
+        schoolRepository.findByCodeAndIsDeletedFalse("DEMO001").ifPresent(school -> {
+            log.info("Seeding other modules data (Marks, Notes, Announcements, OnlineClasses) for demo school...");
+
+            // 1. Announcements
+            if (announcementRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
+                userRepository.findByEmailAndIsDeletedFalse("admin@demo.com").ifPresent(admin -> {
+                    announcementRepository.save(Announcement.builder()
+                            .school(school)
+                            .createdByUser(admin)
+                            .title("Welcome to the new Academic Year 2026-27")
+                            .content("Classes for the new academic year will commence next Monday. Please ensure you have all required textbooks.")
+                            .targetAudience("ALL")
+                            .build());
+                    announcementRepository.save(Announcement.builder()
+                            .school(school)
+                            .createdByUser(admin)
+                            .title("PTA Meeting Schedule")
+                            .content("The Parent-Teacher Association meeting for Class 10 is scheduled for this Friday at 10:00 AM in the main auditorium.")
+                            .targetAudience("PARENT")
+                            .build());
+                    log.info("Seeded Announcements.");
+                });
+            }
+
+            // 2. Online Classes
+            if (onlineClassRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
+                userRepository.findByEmailAndIsDeletedFalse("teacher@demo.com").ifPresent(teacher -> {
+                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2024-25").ifPresent(cls -> {
+                        subjectRepository.findByCodeAndSchoolIdAndIsDeletedFalse("MATH101", school.getId()).ifPresent(subject -> {
+                            onlineClassRepository.save(OnlineClass.builder()
+                                    .school(school)
+                                    .classRoom(cls)
+                                    .subject(subject)
+                                    .teacher(teacher)
+                                    .title("Introduction to Trigonometry")
+                                    .meetingLink("https://meet.google.com/abc-defg-hij")
+                                    .platform("Google Meet")
+                                    .scheduledAt(java.time.LocalDateTime.now().plusDays(1).withHour(10).withMinute(0))
+                                    .durationMinutes(45)
+                                    .status("SCHEDULED")
+                                    .build());
+                            log.info("Seeded Online Classes.");
+                        });
+                    });
+                });
+            }
+
+            // 3. Notes
+            if (notesRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
+                userRepository.findByEmailAndIsDeletedFalse("teacher@demo.com").ifPresent(teacher -> {
+                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2024-25").ifPresent(cls -> {
+                        subjectRepository.findByCodeAndSchoolIdAndIsDeletedFalse("SCI101", school.getId()).ifPresent(subject -> {
+                            notesRepository.save(Notes.builder()
+                                    .school(school)
+                                    .grade(cls.getName())
+                                    .academicYear(cls.getAcademicYear())
+                                    .subject(subject)
+                                    .uploadedBy(teacher)
+                                    .title("Chapter 1: Chemical Reactions")
+                                    .description("Detailed notes covering balancing chemical equations.")
+                                    .contentUrl("https://example.com/notes/chem-chapter1.pdf")
+                                    .contentType("pdf")
+                                    .build());
+                            log.info("Seeded Notes.");
+                        });
+                    });
+                });
+            }
+
+            // 4. Marks (Exam Results)
+            if (marksRepository.count() == 0) {
+                userRepository.findByEmailAndIsDeletedFalse("student@demo.com").ifPresent(student -> {
+                    examRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent().stream().filter(e -> "Mid-Term Math Exam".equals(e.getName())).findFirst().ifPresent(exam -> {
+                        marksRepository.save(Marks.builder()
+                                .school(school)
+                                .exam(exam)
+                                .student(student)
+                                .marksObtained(85.5)
+                                .remarks("Excellent performance!")
+                                .build());
+                        log.info("Seeded Marks for student@demo.com.");
+                    });
+                });
+                
+                userRepository.findByEmailAndIsDeletedFalse("alice@demo.com").ifPresent(student -> {
+                    examRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent().stream().filter(e -> "Mid-Term Math Exam".equals(e.getName())).findFirst().ifPresent(exam -> {
+                        marksRepository.save(Marks.builder()
+                                .school(school)
+                                .exam(exam)
+                                .student(student)
+                                .marksObtained(92.0)
+                                .remarks("Outstanding!")
+                                .build());
+                        log.info("Seeded Marks for alice@demo.com.");
+                    });
+                });
+            }
+        });
     }
 }

@@ -637,8 +637,8 @@ public class FeeServiceImpl {
                 .studentId(i.getStudent().getId())
                 .studentName(i.getStudent().getFirstName() + " " + i.getStudent().getLastName())
                 .admissionNumber(i.getStudent().getAdmissionNo())
-                .feeStructureId(i.getFeeStructure().getId())
-                .feeStructureName(i.getFeeStructure().getName())
+                .feeStructureId(i.getFeeStructure() != null ? i.getFeeStructure().getId() : null)
+                .feeStructureName(i.getFeeStructure() != null ? i.getFeeStructure().getName() : "General Fee")
                 .createdAt(i.getCreatedAt())
                 .build();
     }

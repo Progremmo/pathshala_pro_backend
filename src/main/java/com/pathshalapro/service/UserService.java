@@ -12,4 +12,5 @@ public interface UserService {
     UserResponse toggleStatus(Long id, boolean active);
     java.util.List<UserResponse> getStudentsByClass(Long classRoomId);
     java.util.List<UserResponse> getChildrenByParentId(Long parentId);
+    void deleteUser(Long id);
 }

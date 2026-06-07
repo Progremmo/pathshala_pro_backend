@@ -26,6 +26,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ClassRoomRepository classRoomRepository;
     private final SecurityUtils securityUtils;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     public Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, String search, Pageable pageable) {
@@ -135,5 +136,38 @@ public class UserServiceImpl implements UserService {
                 .parentName(user.getParent() != null ? (user.getParent().getFirstName() + " " + user.getParent().getLastName()) : null)
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+    @Override
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
+
+        // Soft delete the user
+        user.setDeleted(true);
+        user.setActive(false);
+        userRepository.save(user);
+
+        // Cascade soft delete to student-related records
+        entityManager.createQuery("UPDATE Attendance a SET a.isDeleted = true WHERE a.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Marks m SET m.isDeleted = true WHERE m.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE FeeInvoice f SET f.isDeleted = true WHERE f.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Payment p SET p.isDeleted = true WHERE p.paidBy.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE StudentFeeConcession c SET c.isDeleted = true WHERE c.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE AdvanceCredit ac SET ac.isDeleted = true WHERE ac.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+
+        // Cascade soft delete to teacher-related records
+        entityManager.createQuery("UPDATE Timetable t SET t.isDeleted = true WHERE t.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Notes n SET n.isDeleted = true WHERE n.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE OnlineClass oc SET oc.isDeleted = true WHERE oc.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
     }
 }

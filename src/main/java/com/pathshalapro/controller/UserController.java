@@ -80,4 +80,13 @@ public class UserController {
         log.info("Received status toggle request for user {}: {}", id, active);
         return ResponseEntity.ok(ApiResponse.success(userService.toggleStatus(id, active)));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('PROJECT_ADMIN')")
+    @Operation(summary = "Soft delete a user and all related records")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
+        log.info("Received delete request for user {}", id);
+        userService.deleteUser(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }
