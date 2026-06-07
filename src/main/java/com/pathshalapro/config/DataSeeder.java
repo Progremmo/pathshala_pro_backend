@@ -255,6 +255,8 @@ public class DataSeeder {
                     mainStudent.setParent(parent);
                     userRepository.save(mainStudent);
                 });
+                // Seed Attendance for main dummy student
+                seedAttendance(school, mainStudent, class10A, 30, 26);
             });
             assignStudentToClass(student1, class10A);
             assignStudentToClass(student2, class10A);
@@ -263,7 +265,9 @@ public class DataSeeder {
             // 4. Seed Attendance for Alice
             seedAttendance(school, student1, class10A, 20, 18); // 20 days total, 18 present
 
-            // 5. Seed Upcoming Exams
+            // 5. Seed Past and Upcoming Exams
+            seedExam(school, class10A, math, "Unit Test 1 - Math", ExamType.UNIT_TEST, LocalDate.now().minusDays(30));
+            seedExam(school, class10A, science, "Unit Test 1 - Science", ExamType.UNIT_TEST, LocalDate.now().minusDays(28));
             seedExam(school, class10A, math, "Mid-Term Math Exam", ExamType.MID_TERM, LocalDate.now().plusDays(5));
             seedExam(school, class10A, science, "Unit Test - Physics", ExamType.UNIT_TEST, LocalDate.now().plusDays(2));
         });
@@ -729,33 +733,34 @@ public class DataSeeder {
             }
 
             // 4. Marks (Exam Results)
-            if (marksRepository.count() == 0) {
-                userRepository.findByEmailAndIsDeletedFalse("student@demo.com").ifPresent(student -> {
-                    examRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent().stream().filter(e -> "Mid-Term Math Exam".equals(e.getName())).findFirst().ifPresent(exam -> {
-                        marksRepository.save(Marks.builder()
-                                .school(school)
-                                .exam(exam)
-                                .student(student)
-                                .marksObtained(85.5)
-                                .remarks("Excellent performance!")
-                                .build());
-                        log.info("Seeded Marks for student@demo.com.");
-                    });
-                });
-                
-                userRepository.findByEmailAndIsDeletedFalse("alice@demo.com").ifPresent(student -> {
-                    examRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent().stream().filter(e -> "Mid-Term Math Exam".equals(e.getName())).findFirst().ifPresent(exam -> {
-                        marksRepository.save(Marks.builder()
-                                .school(school)
-                                .exam(exam)
-                                .student(student)
-                                .marksObtained(92.0)
-                                .remarks("Outstanding!")
-                                .build());
-                        log.info("Seeded Marks for alice@demo.com.");
-                    });
-                });
-            }
+            userRepository.findByEmailAndIsDeletedFalse("student@demo.com").ifPresent(student -> {
+                seedMarksForStudent(school, student, "Unit Test 1 - Math", 95.0, "Outstanding performance!");
+                seedMarksForStudent(school, student, "Unit Test 1 - Science", 88.5, "Good work, can improve.");
+            });
+            
+            userRepository.findByEmailAndIsDeletedFalse("alice@demo.com").ifPresent(student -> {
+                seedMarksForStudent(school, student, "Unit Test 1 - Math", 92.0, "Great!");
+                seedMarksForStudent(school, student, "Unit Test 1 - Science", 91.0, "Excellent!");
+            });
         });
+    }
+
+    private void seedMarksForStudent(School school, User student, String examName, double marksObtained, String remarks) {
+        examRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged())
+                .getContent().stream()
+                .filter(e -> examName.equals(e.getName()))
+                .findFirst()
+                .ifPresent(exam -> {
+                    if (marksRepository.findByExamIdAndStudentIdAndIsDeletedFalse(exam.getId(), student.getId()).isEmpty()) {
+                        marksRepository.save(Marks.builder()
+                                .school(school)
+                                .exam(exam)
+                                .student(student)
+                                .marksObtained(marksObtained)
+                                .remarks(remarks)
+                                .build());
+                        log.info("Seeded Marks for {}: {} - {}", student.getEmail(), examName, marksObtained);
+                    }
+                });
     }
 }

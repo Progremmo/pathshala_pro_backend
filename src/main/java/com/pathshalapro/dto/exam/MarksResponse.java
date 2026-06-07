@@ -15,7 +15,14 @@ public class MarksResponse {
     private String studentName;
     private Long examId;
     private String examName;
+    private String examTitle;
+    private String subjectName;
+    private String examType;
+    private String academicYear;
+    private java.time.LocalDate examDate;
     private Double marksObtained;
+    private Double maxMarks;
+    private String grade;
     private String remarks;
     private Boolean isAbsent;
 }
