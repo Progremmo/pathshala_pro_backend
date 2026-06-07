@@ -144,6 +144,7 @@ public class FeeController {
 
     private final com.pathshalapro.service.impl.PdfGeneratorService pdfGeneratorService;
     private final com.pathshalapro.repository.PaymentRepository paymentRepository;
+    private final com.pathshalapro.repository.FeeInvoiceRepository feeInvoiceRepository;
 
     @PostMapping("/payment/verify")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
@@ -159,6 +160,7 @@ public class FeeController {
     @GetMapping("/payment/{paymentId}/receipt")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
     @Operation(summary = "Download Payment Receipt PDF")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> downloadReceipt(
             @PathVariable Long schoolId,
             @PathVariable Long paymentId) {
@@ -172,6 +174,27 @@ public class FeeController {
         byte[] pdfBytes = pdfGeneratorService.generatePaymentReceipt(payment);
         return ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt_" + payment.getReceiptNumber() + ".pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/invoices/{invoiceId}/pdf")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
+    @Operation(summary = "Download Fee Invoice PDF")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> downloadInvoicePdf(
+            @PathVariable Long schoolId,
+            @PathVariable Long invoiceId) {
+        com.pathshalapro.entity.FeeInvoice invoice = feeInvoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> com.pathshalapro.exception.ApiException.notFound("Invoice not found"));
+
+        if (!invoice.getSchool().getId().equals(schoolId)) {
+            throw com.pathshalapro.exception.ApiException.forbidden("Access denied");
+        }
+
+        byte[] pdfBytes = pdfGeneratorService.generateInvoicePdf(invoice);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=invoice_" + invoice.getInvoiceNumber() + ".pdf")
                 .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
                 .body(pdfBytes);
     }

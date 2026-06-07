@@ -233,9 +233,9 @@ public class DataSeeder {
             log.info("Seeding comprehensive demo data for school: {}", school.getName());
 
             // 1. Seed Classrooms
-            ClassRoom class10A = seedClassRoom(school, "Class 10", "A", "10", "2024-25");
-            ClassRoom class10B = seedClassRoom(school, "Class 10", "B", "10", "2024-25");
-            seedClassRoom(school, "Class 9", "A", "9", "2024-25");
+            ClassRoom class10A = seedClassRoom(school, "Class 10", "A", "10", "2026-27");
+            ClassRoom class10B = seedClassRoom(school, "Class 10", "B", "10", "2026-27");
+            seedClassRoom(school, "Class 9", "A", "9", "2026-27");
 
             // 2. Seed Subjects
             Subject math = seedSubject(school, "Mathematics", "MATH101", "10");
@@ -304,30 +304,27 @@ public class DataSeeder {
     }
 
     private void assignStudentToClass(User student, ClassRoom classRoom) {
-        if (student.getClassRoom() == null) {
-            student.setClassRoom(classRoom);
-            userRepository.save(student);
-            log.info("Assigned student {} to class {}", student.getEmail(), classRoom.getName());
-        }
+        student.setClassRoom(classRoom);
+        userRepository.save(student);
+        log.info("Assigned student {} to class {} ({})", student.getEmail(), classRoom.getName(), classRoom.getAcademicYear());
     }
 
     private void seedAttendance(School school, User student, ClassRoom classRoom, int totalDays, int presentDays) {
-        if (attendanceRepository.countByStudentIdAndIsDeletedFalse(student.getId()) == 0) {
-            LocalDate date = LocalDate.now().minusDays(totalDays);
-            for (int i = 0; i < totalDays; i++) {
-                AttendanceStatus status = (i < presentDays) ? AttendanceStatus.PRESENT : AttendanceStatus.ABSENT;
-                Attendance attendance = Attendance.builder()
-                        .school(school)
-                        .student(student)
-                        .classRoom(classRoom)
-                        .attendanceDate(date)
-                        .status(status)
-                        .build();
-                attendanceRepository.save(attendance);
-                date = date.plusDays(1);
-            }
-            log.info("Seeded attendance for student: {}", student.getEmail());
+        attendanceRepository.deleteAll(attendanceRepository.findByStudentIdAndIsDeletedFalse(student.getId(), org.springframework.data.domain.Pageable.unpaged()).getContent());
+        LocalDate date = LocalDate.now().minusDays(totalDays);
+        for (int i = 0; i < totalDays; i++) {
+            AttendanceStatus status = (i < presentDays) ? AttendanceStatus.PRESENT : AttendanceStatus.ABSENT;
+            Attendance attendance = Attendance.builder()
+                    .school(school)
+                    .student(student)
+                    .classRoom(classRoom)
+                    .attendanceDate(date)
+                    .status(status)
+                    .build();
+            attendanceRepository.save(attendance);
+            date = date.plusDays(1);
         }
+        log.info("Seeded attendance for student: {}", student.getEmail());
     }
 
     private void seedExam(School school, ClassRoom classRoom, Subject subject, String title, ExamType type,
@@ -407,10 +404,10 @@ public class DataSeeder {
                 // 3. Allocations
                 classRoomRepository
                         .findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A",
-                                school.getId(), "2024-25")
+                                school.getId(), "2026-27")
                         .ifPresent(cls -> {
                             feeAllocationRepository.save(FeeAllocation.builder()
-                                    .school(school).classRoom(cls).feeGroup(stdGroup).academicYear("2024-25").build());
+                                    .school(school).classRoom(cls).feeGroup(stdGroup).academicYear("2026-27").build());
                             log.info("Allocated fees to Class 10-A");
                         });
             }
@@ -586,10 +583,10 @@ public class DataSeeder {
             }
 
             // 2. Installment Plans
-            if (feeInstallmentPlanRepository.findBySchoolIdAndAcademicYear(school.getId(), "2024-25").isEmpty()) {
+            if (feeInstallmentPlanRepository.findBySchoolIdAndAcademicYear(school.getId(), "2026-27").isEmpty()) {
                 FeeInstallmentPlan plan = FeeInstallmentPlan.builder()
                         .school(school).name("Annual Standard Split").totalAmount(new BigDecimal("60000.00"))
-                        .academicYear("2024-25").build();
+                        .academicYear("2026-27").build();
                 
                 plan.setInstallments(List.of(
                         FeeInstallment.builder().feeInstallmentPlan(plan).installmentNumber(1).amount(new BigDecimal("15000.00")).dueDate(LocalDate.of(2024, 4, 15)).build(),
@@ -689,7 +686,7 @@ public class DataSeeder {
             // 2. Online Classes
             if (onlineClassRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
                 userRepository.findByEmailAndIsDeletedFalse("teacher@demo.com").ifPresent(teacher -> {
-                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2024-25").ifPresent(cls -> {
+                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2026-27").ifPresent(cls -> {
                         subjectRepository.findByCodeAndSchoolIdAndIsDeletedFalse("MATH101", school.getId()).ifPresent(subject -> {
                             onlineClassRepository.save(OnlineClass.builder()
                                     .school(school)
@@ -712,7 +709,7 @@ public class DataSeeder {
             // 3. Notes
             if (notesRepository.findBySchoolIdAndIsDeletedFalse(school.getId(), org.springframework.data.domain.Pageable.unpaged()).isEmpty()) {
                 userRepository.findByEmailAndIsDeletedFalse("teacher@demo.com").ifPresent(teacher -> {
-                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2024-25").ifPresent(cls -> {
+                    classRoomRepository.findByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse("Class 10", "A", school.getId(), "2026-27").ifPresent(cls -> {
                         subjectRepository.findByCodeAndSchoolIdAndIsDeletedFalse("SCI101", school.getId()).ifPresent(subject -> {
                             notesRepository.save(Notes.builder()
                                     .school(school)
