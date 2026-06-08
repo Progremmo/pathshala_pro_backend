@@ -139,6 +139,40 @@ public class AuthServiceImpl implements AuthService {
         if (request.getParentId() != null) {
             parent = userRepository.findByIdAndIsDeletedFalse(request.getParentId())
                     .orElseThrow(() -> ApiException.notFound("Parent not found with ID: " + request.getParentId()));
+        } else if (request.getParentEmail() != null && !request.getParentEmail().isBlank()) {
+            String pEmail = request.getParentEmail().trim().toLowerCase();
+            var parentOpt = userRepository.findByEmailAndIsDeletedFalse(pEmail);
+            if (parentOpt.isPresent()) {
+                parent = parentOpt.get();
+            } else {
+                // Create new parent account
+                Role parentRole = roleRepository.findByName(RoleName.PARENT)
+                        .orElseThrow(() -> ApiException.notFound("PARENT role not found"));
+                
+                String pPlainPassword = org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(8) + "1aA@";
+                User newParent = User.builder()
+                        .firstName(request.getParentFirstName() != null && !request.getParentFirstName().isBlank() ? request.getParentFirstName().trim() : "Parent")
+                        .lastName(request.getParentLastName() != null && !request.getParentLastName().isBlank() ? request.getParentLastName().trim() : request.getLastName())
+                        .email(pEmail)
+                        .password(passwordEncoder.encode(pPlainPassword))
+                        .phone(request.getParentPhone())
+                        .isActive(true)
+                        .isEmailVerified(false)
+                        .school(school)
+                        .roles(new java.util.ArrayList<>(java.util.List.of(parentRole)))
+                        .build();
+                parent = userRepository.save(newParent);
+                
+                // Send email to new parent
+                try {
+                    String pLoginUrl = frontendUrl + "/login";
+                    String pSubject = "Welcome to PathshalaPro - Parent Account Created";
+                    String pHtmlBody = getRegistrationHtmlTemplate(newParent.getFirstName(), newParent.getEmail(), pPlainPassword, pLoginUrl);
+                    emailService.sendHtmlEmail(newParent.getEmail(), pSubject, pHtmlBody);
+                } catch (Exception e) {
+                    log.error("Failed to send welcome email to parent {}", newParent.getEmail(), e);
+                }
+            }
         }
 
         User user = User.builder()

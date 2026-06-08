@@ -50,4 +50,12 @@ public class RegisterUserRequest {
 
     // Optional: for students (link to parent user)
     private Long parentId;
+
+    // Optional: for students (create new parent)
+    private String parentFirstName;
+    private String parentLastName;
+    @Email(message = "Invalid parent email format")
+    private String parentEmail;
+    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid parent phone number")
+    private String parentPhone;
 }

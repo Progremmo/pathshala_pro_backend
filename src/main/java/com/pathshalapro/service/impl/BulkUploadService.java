@@ -26,6 +26,7 @@ public class BulkUploadService {
     private final ClassRoomExcelParser classRoomParser;
     private final TimetableExcelParser timetableParser;
     private final FeeStructureExcelParser feeStructureParser;
+    private final ParentExcelParser parentParser;
 
     /**
      * Generate a downloadable Excel template for the given module.
@@ -38,6 +39,7 @@ public class BulkUploadService {
             case "classes" -> classRoomParser.generateTemplate();
             case "timetable" -> timetableParser.generateTemplate();
             case "fees" -> feeStructureParser.generateTemplate();
+            case "parents" -> parentParser.generateTemplate();
             default -> throw new IllegalArgumentException("Unknown module: " + module);
         };
     }
@@ -62,6 +64,7 @@ public class BulkUploadService {
             case "classes" -> classRoomParser.parse(inputStream, school);
             case "timetable" -> timetableParser.parse(inputStream, school);
             case "fees" -> feeStructureParser.parse(inputStream, school);
+            case "parents" -> parentParser.parse(inputStream, school);
             default -> throw new IllegalArgumentException("Unknown module: " + module);
         };
 
