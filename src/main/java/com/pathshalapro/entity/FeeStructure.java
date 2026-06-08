@@ -42,7 +42,7 @@ public class FeeStructure extends BaseEntity {
     @Column(name = "grade", length = 20)
     private String grade; // Applicable grade
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear;
 
     @Column(name = "description", columnDefinition = "TEXT")

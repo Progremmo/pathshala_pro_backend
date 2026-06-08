@@ -164,7 +164,7 @@ public class StudentExcelParser {
                         continue;
                     }
 
-                    User.UserBuilder builder = User.builder()
+                    User user = User.builder()
                             .firstName(firstName.trim())
                             .lastName(lastName.trim())
                             .email(email.trim().toLowerCase())
@@ -172,15 +172,23 @@ public class StudentExcelParser {
                             .phone(phone)
                             .gender(gender)
                             .admissionNo(admissionNo.trim())
-                            .classRoom(classRoomOpt.get())
                             .isActive(true)
                             .isEmailVerified(false)
                             .school(school)
-                            .roles(List.of(studentRole));
+                            .roles(List.of(studentRole))
+                            .build();
+                            
+                    com.pathshalapro.entity.StudentClassAllocation allocation = com.pathshalapro.entity.StudentClassAllocation.builder()
+                            .student(user)
+                            .classRoom(classRoomOpt.get())
+                            .academicYear(classRoomOpt.get().getAcademicYear())
+                            .school(school)
+                            .build();
+                    user.setClassAllocations(new java.util.ArrayList<>(List.of(allocation)));
 
                     if (dob != null && !dob.isBlank()) {
                         try {
-                            builder.dateOfBirth(java.time.LocalDate.parse(dob.trim()));
+                            user.setDateOfBirth(java.time.LocalDate.parse(dob.trim()));
                         } catch (Exception e) {
                             result.addError(i + 1, "dateOfBirth", "Invalid date format. Use YYYY-MM-DD");
                             continue;
@@ -192,7 +200,7 @@ public class StudentExcelParser {
                         String pEmail = parentEmail.trim().toLowerCase();
                         var parentOpt = userRepository.findByEmailAndIsDeletedFalse(pEmail);
                         if (parentOpt.isPresent()) {
-                            builder.parent(parentOpt.get());
+                            user.setParent(parentOpt.get());
                         } else {
                             // Create new parent account
                             Role parentRole = roleRepository.findByName(RoleName.PARENT)
@@ -208,11 +216,11 @@ public class StudentExcelParser {
                                     .roles(List.of(parentRole))
                                     .build();
                             User savedParent = userRepository.save(newParent);
-                            builder.parent(savedParent);
+                            user.setParent(savedParent);
                         }
                     }
 
-                    userRepository.save(builder.build());
+                    userRepository.save(user);
                     result.incrementSuccess();
                 } catch (Exception e) {
                     result.addError(i + 1, "general", "Unexpected error: " + e.getMessage());

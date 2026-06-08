@@ -35,7 +35,7 @@ public class ClassRoom extends BaseEntity {
     @Column(name = "grade", nullable = false, length = 20)
     private String grade; // e.g. "10", "11", "12"
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear; // e.g. "2024-25"
 
     @Column(name = "capacity")
@@ -54,8 +54,8 @@ public class ClassRoom extends BaseEntity {
     private User classTeacher;
 
     @Builder.Default
-    @OneToMany(mappedBy = "classRoom", fetch = FetchType.LAZY)
-    private List<User> students = new ArrayList<>();
+    @OneToMany(mappedBy = "classRoom", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<StudentClassAllocation> allocations = new ArrayList<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "classRoom", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

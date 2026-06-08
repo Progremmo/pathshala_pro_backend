@@ -16,7 +16,7 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
 
     List<Marks> findByExamIdAndIsDeletedFalse(Long examId);
 
-    List<Marks> findByStudentIdAndIsDeletedFalse(Long studentId);
+    List<Marks> findByStudentIdAndAcademicYearAndIsDeletedFalse(Long studentId, String academicYear);
 
     @Query("SELECT m FROM Marks m WHERE m.student.id = :studentId AND m.exam.classRoom.id = :classRoomId " +
            "AND m.exam.academicYear = :year AND m.isDeleted = false")

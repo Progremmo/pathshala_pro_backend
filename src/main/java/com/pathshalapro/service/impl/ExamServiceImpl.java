@@ -50,6 +50,8 @@ public class ExamServiceImpl {
                 request.getSubjectId(), schoolId)
                 .orElseThrow(() -> ApiException.notFound("Subject not found."));
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+
         Exam exam = Exam.builder()
                 .name(request.getName())
                 .examType(request.getExamType())
@@ -58,7 +60,7 @@ public class ExamServiceImpl {
                 .durationMinutes(request.getDurationMinutes())
                 .totalMarks(request.getTotalMarks())
                 .passingMarks(request.getPassingMarks())
-                .academicYear(request.getAcademicYear())
+                .academicYear(currentAcademicYear)
                 .instructions(request.getInstructions())
                 .isResultPublished(false)
                 .school(school)
@@ -71,7 +73,8 @@ public class ExamServiceImpl {
 
     @Transactional(readOnly = true)
     public Page<ExamResponse> getExamsBySchool(Long schoolId, Pageable pageable) {
-        return examRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return examRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, currentAcademicYear, pageable)
                 .map(this::mapToResponse);
     }
 
@@ -97,6 +100,11 @@ public class ExamServiceImpl {
                 request.getSubjectId(), schoolId)
                 .orElseThrow(() -> ApiException.notFound("Subject not found."));
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        if (!exam.getAcademicYear().equals(currentAcademicYear)) {
+            throw ApiException.badRequest("Cannot update exam from a different academic year.");
+        }
+
         exam.setName(request.getName());
         exam.setExamType(request.getExamType());
         exam.setExamDate(request.getExamDate());
@@ -104,7 +112,7 @@ public class ExamServiceImpl {
         exam.setDurationMinutes(request.getDurationMinutes());
         exam.setTotalMarks(request.getTotalMarks());
         exam.setPassingMarks(request.getPassingMarks());
-        exam.setAcademicYear(request.getAcademicYear());
+        // Academic year should remain untouched
         exam.setInstructions(request.getInstructions());
         exam.setClassRoom(classRoom);
         exam.setSubject(subject);
@@ -161,6 +169,7 @@ public class ExamServiceImpl {
         marks.setGrade(request.isAbsent() ? "AB" : calculateGrade(request.getMarksObtained(), exam.getTotalMarks()));
         marks.setRemarks(request.getRemarks());
         marks.setEnteredBy(enteredBy);
+        marks.setAcademicYear(com.pathshalapro.config.AcademicYearContextHolder.get());
 
         return mapToMarksResponse(marksRepository.save(marks));
     }
@@ -250,7 +259,14 @@ public class ExamServiceImpl {
                 .studentName(m.getStudent().getFirstName() + " " + m.getStudent().getLastName())
                 .examId(m.getExam().getId())
                 .examName(m.getExam().getName())
+                .examTitle(m.getExam().getName())
+                .subjectName(m.getExam().getSubject().getName())
+                .examType(m.getExam().getExamType() != null ? m.getExam().getExamType().name() : null)
+                .academicYear(m.getExam().getAcademicYear())
+                .examDate(m.getExam().getExamDate())
                 .marksObtained(m.getMarksObtained())
+                .maxMarks(m.getExam().getTotalMarks())
+                .grade(m.getGrade() != null ? m.getGrade() : calculateGrade(m.getMarksObtained(), m.getExam().getTotalMarks()))
                 .remarks(m.getRemarks())
                 .isAbsent(m.isAbsent())
                 .build();

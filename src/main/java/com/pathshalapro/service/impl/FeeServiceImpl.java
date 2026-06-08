@@ -50,6 +50,12 @@ public class FeeServiceImpl {
     private final ClassRoomRepository classRoomRepository;
     private final RazorpayClient razorpayClient;
 
+    private final FeeInstallmentPlanRepository feeInstallmentPlanRepository;
+    private final AdvanceCreditRepository advanceCreditRepository;
+    private final StudentFeeConcessionRepository studentFeeConcessionRepository;
+    private final LateFeeRuleRepository lateFeeRuleRepository;
+    private final FeeAuditLogRepository feeAuditLogRepository;
+
     @Value("${razorpay.key.secret}")
     private String razorpaySecret;
 
@@ -126,9 +132,10 @@ public class FeeServiceImpl {
         FeeGroup group = feeGroupRepository.findById(groupId)
                 .orElseThrow(() -> ApiException.notFound("Fee group not found."));
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
         FeeAllocation allocation = FeeAllocation.builder()
                 .feeGroup(group)
-                .academicYear(academicYear)
+                .academicYear(currentAcademicYear)
                 .school(school)
                 .build();
 
@@ -160,7 +167,7 @@ public class FeeServiceImpl {
                 .amount(request.getAmount())
                 .frequency(request.getFrequency())
                 .grade(request.getGrade())
-                .academicYear(request.getAcademicYear())
+                .academicYear(com.pathshalapro.config.AcademicYearContextHolder.get())
                 .description(request.getDescription())
                 .dueDay(request.getDueDay())
                 .school(school)
@@ -205,7 +212,8 @@ public class FeeServiceImpl {
 
     @Transactional(readOnly = true)
     public List<FeeAllocationResponse> getAllocations(Long schoolId) {
-        return feeAllocationRepository.findBySchoolIdAndIsDeletedFalse(schoolId)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return feeAllocationRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, currentAcademicYear)
                 .stream()
                 .map(this::mapToAllocationResponse)
                 .toList();
@@ -252,7 +260,7 @@ public class FeeServiceImpl {
                 .dueDate(request.getDueDate())
                 .periodMonth(request.getPeriodMonth())
                 .periodYear(request.getPeriodYear())
-                .academicYear(request.getAcademicYear())
+                .academicYear(com.pathshalapro.config.AcademicYearContextHolder.get())
                 .remarks(request.getRemarks())
                 .school(school)
                 .student(student)
@@ -264,12 +272,14 @@ public class FeeServiceImpl {
 
     @Transactional(readOnly = true)
     public Page<FeeInvoiceResponse> getInvoicesBySchool(Long schoolId, Pageable pageable) {
-        return feeInvoiceRepository.findBySchoolIdAndIsDeletedFalse(schoolId, pageable).map(this::mapToResponse);
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return feeInvoiceRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, currentAcademicYear, pageable).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
     public Page<FeeInvoiceResponse> getInvoicesByStudent(Long studentId, Pageable pageable) {
-        return feeInvoiceRepository.findByStudentIdAndIsDeletedFalse(studentId, pageable).map(this::mapToResponse);
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return feeInvoiceRepository.findByStudentIdAndAcademicYearAndIsDeletedFalse(studentId, currentAcademicYear, pageable).map(this::mapToResponse);
     }
 
     @Transactional
@@ -430,8 +440,12 @@ public class FeeServiceImpl {
             throw ApiException.badRequest("No fee groups allocated to this class for the given academic year.");
         }
 
-        for (User student : classRoom.getStudents()) {
+        for (StudentClassAllocation allocationRecord : classRoom.getAllocations()) {
+            if (!allocationRecord.getAcademicYear().equals(academicYear)) continue;
+            User student = allocationRecord.getStudent();
             if (student.isDeleted()) continue;
+
+            List<StudentFeeConcession> concessions = studentFeeConcessionRepository.findByStudentId(student.getId());
 
             for (FeeAllocation allocation : allocations) {
                 FeeGroup group = allocation.getFeeGroup();
@@ -446,14 +460,54 @@ public class FeeServiceImpl {
                         .map(FeeGroupItem::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+                // Calculate Concession
+                BigDecimal discount = BigDecimal.ZERO;
+                for (StudentFeeConcession concession : concessions) {
+                    if (concession.getFeeHead() == null) {
+                        // Applies to total amount
+                        if ("PERCENTAGE".equalsIgnoreCase(concession.getDiscountType())) {
+                            discount = discount.add(totalAmount.multiply(concession.getValue()).divide(BigDecimal.valueOf(100)));
+                        } else {
+                            discount = discount.add(concession.getValue());
+                        }
+                    }
+                }
+                
+                if (discount.compareTo(totalAmount) > 0) {
+                    discount = totalAmount; // Cap discount
+                }
+
+                BigDecimal netAmount = totalAmount.subtract(discount);
+                BigDecimal paidAmount = BigDecimal.ZERO;
+                PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+                // Consume Advance Credit
+                AdvanceCredit advanceCredit = advanceCreditRepository.findByStudentId(student.getId()).orElse(null);
+                if (advanceCredit != null && advanceCredit.getCreditAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    if (advanceCredit.getCreditAmount().compareTo(netAmount) >= 0) {
+                        // Fully paid by advance
+                        advanceCredit.setCreditAmount(advanceCredit.getCreditAmount().subtract(netAmount));
+                        paidAmount = netAmount;
+                        paymentStatus = PaymentStatus.PAID;
+                    } else {
+                        // Partially paid
+                        paidAmount = advanceCredit.getCreditAmount();
+                        advanceCredit.setCreditAmount(BigDecimal.ZERO);
+                        paymentStatus = PaymentStatus.PARTIAL;
+                    }
+                    advanceCreditRepository.save(advanceCredit);
+                }
+
                 String invoiceNumber = generateInvoiceNumber(schoolId);
 
                 FeeInvoice invoice = FeeInvoice.builder()
                         .invoiceNumber(invoiceNumber)
                         .totalAmount(totalAmount)
-                        .netAmount(totalAmount)
-                        .paidAmount(BigDecimal.ZERO)
-                        .paymentStatus(PaymentStatus.PENDING)
+                        .discountAmount(discount)
+                        .fineAmount(BigDecimal.ZERO)
+                        .netAmount(netAmount)
+                        .paidAmount(paidAmount)
+                        .paymentStatus(paymentStatus)
                         .dueDate(dueDate)
                         .periodMonth(month)
                         .periodYear(year)
@@ -475,6 +529,17 @@ public class FeeServiceImpl {
                 
                 savedInvoice.setItems(items);
                 feeInvoiceRepository.save(savedInvoice);
+
+                // Audit Log
+                FeeAuditLog auditLog = FeeAuditLog.builder()
+                        .entityType("INVOICE")
+                        .entityId(savedInvoice.getId())
+                        .action("CREATED")
+                        .changedBy(1L) // System/Admin user
+                        .school(classRoom.getSchool())
+                        .newState("Invoice generated for " + netAmount)
+                        .build();
+                feeAuditLogRepository.save(auditLog);
             }
         }
     }
@@ -578,8 +643,8 @@ public class FeeServiceImpl {
                 .studentId(i.getStudent().getId())
                 .studentName(i.getStudent().getFirstName() + " " + i.getStudent().getLastName())
                 .admissionNumber(i.getStudent().getAdmissionNo())
-                .feeStructureId(i.getFeeStructure().getId())
-                .feeStructureName(i.getFeeStructure().getName())
+                .feeStructureId(i.getFeeStructure() != null ? i.getFeeStructure().getId() : null)
+                .feeStructureName(i.getFeeStructure() != null ? i.getFeeStructure().getName() : "General Fee")
                 .createdAt(i.getCreatedAt())
                 .build();
     }
@@ -589,11 +654,14 @@ public class FeeServiceImpl {
         List<FeeInvoice> pendingInvoices = feeInvoiceRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, academicYear)
                 .stream()
                 .filter(i -> i.getPaymentStatus() != PaymentStatus.PAID)
-                .filter(i -> classId == null || i.getStudent().getClassRoom().getId().equals(classId))
                 .toList();
-
         for (FeeInvoice invoice : pendingInvoices) {
             User student = invoice.getStudent();
+            
+            boolean studentInClass = classId == null || student.getClassAllocations().stream()
+                .anyMatch(a -> a.getClassRoom().getId().equals(classId) && a.getAcademicYear().equals(academicYear));
+            
+            if (!studentInClass) continue;
             User parent = student.getParent();
 
             String title = "Fee Payment Reminder: " + invoice.getInvoiceNumber();

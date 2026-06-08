@@ -50,11 +50,12 @@ public class TimetableServiceImpl {
 
         // ---- Conflict Detection ----
         long excludeId = -1L; // No existing entry to exclude (new creation)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
 
         boolean teacherConflict = timetableRepository.existsTeacherConflict(
                 teacher.getId(), request.getDayOfWeek(),
                 request.getStartTime(), request.getEndTime(),
-                request.getAcademicYear(), excludeId);
+                currentAcademicYear, excludeId);
 
         if (teacherConflict) {
             throw ApiException.conflict(
@@ -66,7 +67,7 @@ public class TimetableServiceImpl {
         boolean classRoomConflict = timetableRepository.existsClassRoomConflict(
                 classRoom.getId(), request.getDayOfWeek(),
                 request.getStartTime(), request.getEndTime(),
-                request.getAcademicYear(), excludeId);
+                currentAcademicYear, excludeId);
 
         if (classRoomConflict) {
             throw ApiException.conflict(
@@ -80,7 +81,7 @@ public class TimetableServiceImpl {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .periodNumber(request.getPeriodNumber())
-                .academicYear(request.getAcademicYear())
+                .academicYear(currentAcademicYear)
                 .school(school)
                 .classRoom(classRoom)
                 .subject(subject)
@@ -103,11 +104,16 @@ public class TimetableServiceImpl {
             throw ApiException.badRequest("End time must be after start time.");
         }
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        if (!entry.getAcademicYear().equals(currentAcademicYear)) {
+            throw ApiException.badRequest("Cannot update timetable from a different academic year.");
+        }
+
         // Check conflicts (excluding current entry)
         boolean teacherConflict = timetableRepository.existsTeacherConflict(
                 request.getTeacherId(), request.getDayOfWeek(),
                 request.getStartTime(), request.getEndTime(),
-                request.getAcademicYear(), entryId);
+                currentAcademicYear, entryId);
 
         if (teacherConflict) {
             throw ApiException.conflict("Teacher scheduling conflict detected.");
@@ -116,7 +122,7 @@ public class TimetableServiceImpl {
         boolean classRoomConflict = timetableRepository.existsClassRoomConflict(
                 request.getClassRoomId(), request.getDayOfWeek(),
                 request.getStartTime(), request.getEndTime(),
-                request.getAcademicYear(), entryId);
+                currentAcademicYear, entryId);
 
         if (classRoomConflict) {
             throw ApiException.conflict("Classroom scheduling conflict detected.");
@@ -132,13 +138,15 @@ public class TimetableServiceImpl {
 
     @Transactional(readOnly = true)
     public List<TimetableResponse> getClassTimetable(Long classRoomId, String academicYear) {
-        return timetableRepository.findByClassRoomIdAndAcademicYearAndIsDeletedFalse(classRoomId, academicYear)
+        String currentYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return timetableRepository.findByClassRoomIdAndAcademicYearAndIsDeletedFalse(classRoomId, currentYear)
                 .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<TimetableResponse> getTeacherTimetable(Long teacherId, String academicYear) {
-        return timetableRepository.findByTeacherIdAndAcademicYearAndIsDeletedFalse(teacherId, academicYear)
+        String currentYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return timetableRepository.findByTeacherIdAndAcademicYearAndIsDeletedFalse(teacherId, currentYear)
                 .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 

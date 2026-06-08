@@ -53,7 +53,7 @@ public class FeeInvoice extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", nullable = false, length = 20)
+    @Column(name = "payment_status", length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Column(name = "due_date", nullable = false)
@@ -82,6 +82,10 @@ public class FeeInvoice extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fee_structure_id")
     private FeeStructure feeStructure;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fee_installment_id")
+    private FeeInstallment feeInstallment;
 
     @Builder.Default
     @OneToMany(mappedBy = "feeInvoice", cascade = CascadeType.ALL, orphanRemoval = true)

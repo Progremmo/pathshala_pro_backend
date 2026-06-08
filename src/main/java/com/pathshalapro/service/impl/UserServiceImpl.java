@@ -26,6 +26,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ClassRoomRepository classRoomRepository;
     private final SecurityUtils securityUtils;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     public Page<UserResponse> getUsersByRoleAndSchool(RoleName role, Long schoolId, String search, Pageable pageable) {
@@ -66,7 +67,29 @@ public class UserServiceImpl implements UserService {
         if (request.getClassRoomId() != null) {
             ClassRoom classRoom = classRoomRepository.findByIdAndIsDeletedFalse(request.getClassRoomId())
                     .orElseThrow(() -> ApiException.notFound("Classroom not found"));
-            user.setClassRoom(classRoom);
+            
+            String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+            if (user.getClassAllocations() == null) {
+                user.setClassAllocations(new java.util.ArrayList<>());
+            }
+            
+            boolean allocationExists = user.getClassAllocations().stream()
+                .anyMatch(a -> a.getAcademicYear().equals(currentAcademicYear));
+                
+            if (!allocationExists) {
+                com.pathshalapro.entity.StudentClassAllocation allocation = com.pathshalapro.entity.StudentClassAllocation.builder()
+                    .student(user)
+                    .classRoom(classRoom)
+                    .academicYear(currentAcademicYear)
+                    .school(user.getSchool())
+                    .build();
+                user.getClassAllocations().add(allocation);
+            } else {
+                user.getClassAllocations().stream()
+                    .filter(a -> a.getAcademicYear().equals(currentAcademicYear))
+                    .findFirst()
+                    .ifPresent(a -> a.setClassRoom(classRoom));
+            }
         }
 
         if (request.getAdmissionNo() != null) user.setAdmissionNo(request.getAdmissionNo());
@@ -94,7 +117,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public java.util.List<UserResponse> getStudentsByClass(Long classRoomId) {
-        return userRepository.findStudentsByClassRoomId(classRoomId)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return userRepository.findStudentsByClassRoomIdAndAcademicYear(classRoomId, currentAcademicYear)
                 .stream()
                 .map(this::mapToUserResponse)
                 .collect(Collectors.toList());
@@ -109,6 +133,12 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToUserResponse(User user) {
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        ClassRoom currentClass = user.getClassAllocations() == null ? null : user.getClassAllocations().stream()
+                .filter(a -> a.getAcademicYear().equals(currentAcademicYear))
+                .map(com.pathshalapro.entity.StudentClassAllocation::getClassRoom)
+                .findFirst().orElse(null);
+
         return UserResponse.builder()
                 .id(user.getId())
                 .firstName(user.getFirstName())
@@ -129,11 +159,44 @@ public class UserServiceImpl implements UserService {
                 .roles(user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList()))
                 .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
-                .classRoomId(user.getClassRoom() != null ? user.getClassRoom().getId() : null)
-                .classRoomName(user.getClassRoom() != null ? user.getClassRoom().getName() : null)
+                .classRoomId(currentClass != null ? currentClass.getId() : null)
+                .classRoomName(currentClass != null ? currentClass.getName() : null)
                 .parentId(user.getParent() != null ? user.getParent().getId() : null)
                 .parentName(user.getParent() != null ? (user.getParent().getFirstName() + " " + user.getParent().getLastName()) : null)
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+    @Override
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> ApiException.notFound("User not found with id: " + id));
+
+        // Soft delete the user
+        user.setDeleted(true);
+        user.setActive(false);
+        userRepository.save(user);
+
+        // Cascade soft delete to student-related records
+        entityManager.createQuery("UPDATE Attendance a SET a.isDeleted = true WHERE a.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Marks m SET m.isDeleted = true WHERE m.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE FeeInvoice f SET f.isDeleted = true WHERE f.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Payment p SET p.isDeleted = true WHERE p.paidBy.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE StudentFeeConcession c SET c.isDeleted = true WHERE c.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE AdvanceCredit ac SET ac.isDeleted = true WHERE ac.student.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+
+        // Cascade soft delete to teacher-related records
+        entityManager.createQuery("UPDATE Timetable t SET t.isDeleted = true WHERE t.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE Notes n SET n.isDeleted = true WHERE n.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
+        entityManager.createQuery("UPDATE OnlineClass oc SET oc.isDeleted = true WHERE oc.teacher.id = :userId")
+                .setParameter("userId", id).executeUpdate();
     }
 }

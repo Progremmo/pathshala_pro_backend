@@ -79,10 +79,9 @@ public class User extends BaseEntity {
     @JoinColumn(name = "school_id")
     private School school;
 
-    // Classroom (for students)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_room_id")
-    private ClassRoom classRoom;
+    @Builder.Default
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<StudentClassAllocation> classAllocations = new ArrayList<>();
 
     // Parent reference (for students)
     @ManyToOne(fetch = FetchType.LAZY)

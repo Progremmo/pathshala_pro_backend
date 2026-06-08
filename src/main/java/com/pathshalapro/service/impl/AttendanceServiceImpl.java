@@ -70,6 +70,7 @@ public class AttendanceServiceImpl {
                             .student(student)
                             .classRoom(classRoom)
                             .markedBy(markedBy)
+                            .academicYear(com.pathshalapro.config.AcademicYearContextHolder.get())
                             .build());
 
             attendance.setAttendanceDate(attendanceDate);

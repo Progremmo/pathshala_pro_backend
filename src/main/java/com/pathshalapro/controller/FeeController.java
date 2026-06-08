@@ -142,6 +142,10 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.success(orderDetails, "Order created. Proceed with payment."));
     }
 
+    private final com.pathshalapro.service.impl.PdfGeneratorService pdfGeneratorService;
+    private final com.pathshalapro.repository.PaymentRepository paymentRepository;
+    private final com.pathshalapro.repository.FeeInvoiceRepository feeInvoiceRepository;
+
     @PostMapping("/payment/verify")
     @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
     @Operation(summary = "Verify Razorpay payment",
@@ -151,6 +155,48 @@ public class FeeController {
             @Valid @RequestBody PaymentVerifyRequest request) {
         PaymentResponse payment = feeService.verifyPayment(request);
         return ResponseEntity.ok(ApiResponse.success(payment, "Payment verified successfully."));
+    }
+
+    @GetMapping("/payment/{paymentId}/receipt")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
+    @Operation(summary = "Download Payment Receipt PDF")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> downloadReceipt(
+            @PathVariable Long schoolId,
+            @PathVariable Long paymentId) {
+        com.pathshalapro.entity.Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> com.pathshalapro.exception.ApiException.notFound("Payment not found"));
+
+        if (!payment.getSchool().getId().equals(schoolId)) {
+            throw com.pathshalapro.exception.ApiException.forbidden("Access denied");
+        }
+
+        byte[] pdfBytes = pdfGeneratorService.generatePaymentReceipt(payment);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt_" + payment.getReceiptNumber() + ".pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/invoices/{invoiceId}/pdf")
+    @PreAuthorize("hasAnyRole('PROJECT_ADMIN', 'SCHOOL_ADMIN', 'STUDENT', 'PARENT')")
+    @Operation(summary = "Download Fee Invoice PDF")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> downloadInvoicePdf(
+            @PathVariable Long schoolId,
+            @PathVariable Long invoiceId) {
+        com.pathshalapro.entity.FeeInvoice invoice = feeInvoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> com.pathshalapro.exception.ApiException.notFound("Invoice not found"));
+
+        if (!invoice.getSchool().getId().equals(schoolId)) {
+            throw com.pathshalapro.exception.ApiException.forbidden("Access denied");
+        }
+
+        byte[] pdfBytes = pdfGeneratorService.generateInvoicePdf(invoice);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=invoice_" + invoice.getInvoiceNumber() + ".pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdfBytes);
     }
 
     // ---- New Fee Management (Standard Way) ----

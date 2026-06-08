@@ -35,7 +35,7 @@ public class FeeAllocation extends BaseEntity {
     @JoinColumn(name = "student_id")
     private User student;
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear;
 
     @ManyToOne(fetch = FetchType.LAZY)
