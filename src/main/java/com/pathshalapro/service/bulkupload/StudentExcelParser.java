@@ -31,7 +31,7 @@ public class StudentExcelParser {
 
     private static final String[] HEADERS = {
         "First Name*", "Last Name*", "Email*", "Phone", "Gender",
-        "Date of Birth (YYYY-MM-DD)", "Admission No*", "Class Name*", "Section*", "Parent Email"
+        "Date of Birth (YYYY-MM-DD)", "Admission No*", "Class Name*", "Section*", "Parent First Name", "Parent Last Name", "Parent Email", "Parent Phone"
     };
 
     public byte[] generateTemplate() {
@@ -62,6 +62,9 @@ public class StudentExcelParser {
             sample2.createCell(7).setCellValue("Class 9");
             sample2.createCell(8).setCellValue("B");
             sample2.createCell(9).setCellValue("");
+            sample2.createCell(10).setCellValue("");
+            sample2.createCell(11).setCellValue("");
+            sample2.createCell(12).setCellValue("");
 
             // Instructions sheet
             Sheet instrSheet = wb.createSheet("Instructions");
@@ -117,7 +120,10 @@ public class StudentExcelParser {
                     String admissionNo = getCellString(row, 6);
                     String className = getCellString(row, 7);
                     String section = getCellString(row, 8);
-                    String parentEmail = getCellString(row, 9);
+                    String parentFirstName = getCellString(row, 9);
+                    String parentLastName = getCellString(row, 10);
+                    String parentEmail = getCellString(row, 11);
+                    String parentPhone = getCellString(row, 12);
 
                     // Validations
                     if (firstName == null || firstName.isBlank()) {
@@ -206,10 +212,11 @@ public class StudentExcelParser {
                             Role parentRole = roleRepository.findByName(RoleName.PARENT)
                                     .orElseThrow(() -> new RuntimeException("PARENT role not found"));
                             User newParent = User.builder()
-                                    .firstName("Parent")
-                                    .lastName(lastName.trim())
+                                    .firstName(parentFirstName != null && !parentFirstName.isBlank() ? parentFirstName.trim() : "Parent")
+                                    .lastName(parentLastName != null && !parentLastName.isBlank() ? parentLastName.trim() : lastName.trim())
                                     .email(pEmail)
                                     .password(passwordEncoder.encode("Welcome@123"))
+                                    .phone(parentPhone)
                                     .isActive(true)
                                     .isEmailVerified(false)
                                     .school(school)
