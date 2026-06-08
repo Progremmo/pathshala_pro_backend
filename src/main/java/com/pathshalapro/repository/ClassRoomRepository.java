@@ -17,15 +17,17 @@ public interface ClassRoomRepository extends JpaRepository<ClassRoom, Long> {
     Optional<ClassRoom> findByIdAndIsDeletedFalse(Long id);
     
     Optional<ClassRoom> findByIdAndSchoolIdAndIsDeletedFalse(Long id, Long schoolId);
+    
+    Optional<ClassRoom> findByIdAndSchoolIdAndAcademicYearAndIsDeletedFalse(Long id, Long schoolId, String academicYear);
 
-    List<ClassRoom> findBySchoolIdAndIsDeletedFalse(Long schoolId);
+    List<ClassRoom> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear);
 
-    Page<ClassRoom> findBySchoolIdAndIsDeletedFalse(Long schoolId, Pageable pageable);
+    Page<ClassRoom> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear, Pageable pageable);
 
     List<ClassRoom> findBySchoolIdAndGradeAndAcademicYearAndIsDeletedFalse(
             Long schoolId, String grade, String academicYear);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.classRoom.id = :classRoomId AND u.isDeleted = false")
+    @Query("SELECT COUNT(sca) FROM StudentClassAllocation sca WHERE sca.classRoom.id = :classRoomId AND sca.student.isDeleted = false")
     Long countStudentsByClassRoomId(@Param("classRoomId") Long classRoomId);
 
     boolean existsByNameAndSectionAndSchoolIdAndAcademicYearAndIsDeletedFalse(

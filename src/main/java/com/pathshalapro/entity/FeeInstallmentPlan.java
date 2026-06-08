@@ -31,7 +31,7 @@ public class FeeInstallmentPlan extends BaseEntity {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -152,7 +152,6 @@ public class AuthServiceImpl implements AuthService {
                 .dateOfBirth(request.getDateOfBirth())
                 .address(request.getAddress())
                 .admissionNo(request.getAdmissionNo())
-                .classRoom(classRoom)
                 .parent(parent)
                 .employeeId(request.getEmployeeId())
                 .qualification(request.getQualification())
@@ -160,6 +159,17 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .roles(new ArrayList<>(List.of(role)))
                 .build();
+                
+        if (classRoom != null) {
+            String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+            com.pathshalapro.entity.StudentClassAllocation allocation = com.pathshalapro.entity.StudentClassAllocation.builder()
+                    .student(user)
+                    .classRoom(classRoom)
+                    .academicYear(currentAcademicYear)
+                    .school(school)
+                    .build();
+            user.setClassAllocations(new java.util.ArrayList<>(List.of(allocation)));
+        }
 
         User saved = userRepository.save(user);
         log.info("User registered successfully: {}", saved.getId());
@@ -312,6 +322,12 @@ public class AuthServiceImpl implements AuthService {
         List<RoleName> roleNames = user.getRoles().stream()
                 .map(r -> r.getName())
                 .collect(Collectors.toList());
+                
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        ClassRoom currentClass = user.getClassAllocations() == null ? null : user.getClassAllocations().stream()
+                .filter(a -> a.getAcademicYear().equals(currentAcademicYear))
+                .map(com.pathshalapro.entity.StudentClassAllocation::getClassRoom)
+                .findFirst().orElse(null);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -323,7 +339,7 @@ public class AuthServiceImpl implements AuthService {
                 .roles(roleNames)
                 .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
-                .classRoomId(user.getClassRoom() != null ? user.getClassRoom().getId() : null)
+                .classRoomId(currentClass != null ? currentClass.getId() : null)
                 .expiresIn(86400L)
                 .build();
     }

@@ -27,7 +27,8 @@ public class ClassRoomServiceImpl {
     private final UserRepository userRepository;
 
     public List<ClassRoomResponse> getClassRooms(Long schoolId) {
-        return classRoomRepository.findBySchoolIdAndIsDeletedFalse(schoolId)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return classRoomRepository.findBySchoolIdAndAcademicYearAndIsDeletedFalse(schoolId, currentAcademicYear)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -54,6 +55,8 @@ public class ClassRoomServiceImpl {
         School school = schoolRepository.findByIdAndIsDeletedFalse(schoolId)
                 .orElseThrow(() -> ApiException.notFound("School not found with id: " + schoolId));
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+
         User teacher = null;
         if (request.getClassTeacherId() != null) {
             teacher = userRepository.findByIdAndIsDeletedFalse(request.getClassTeacherId())
@@ -64,7 +67,7 @@ public class ClassRoomServiceImpl {
                 .name(request.getName())
                 .section(request.getSection())
                 .grade(request.getGrade())
-                .academicYear(request.getAcademicYear())
+                .academicYear(currentAcademicYear) // Enforce context
                 .capacity(request.getCapacity())
                 .roomNumber(request.getRoomNumber())
                 .school(school)
@@ -83,6 +86,11 @@ public class ClassRoomServiceImpl {
             throw ApiException.badRequest("Classroom does not belong to the specified school");
         }
 
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        if (!classRoom.getAcademicYear().equals(currentAcademicYear)) {
+            throw ApiException.badRequest("Cannot modify a classroom from a different academic year.");
+        }
+
         User teacher = null;
         if (request.getClassTeacherId() != null) {
             teacher = userRepository.findByIdAndIsDeletedFalse(request.getClassTeacherId())
@@ -92,7 +100,7 @@ public class ClassRoomServiceImpl {
         classRoom.setName(request.getName());
         classRoom.setSection(request.getSection());
         classRoom.setGrade(request.getGrade());
-        classRoom.setAcademicYear(request.getAcademicYear());
+        // Do not allow changing the academic year on update
         classRoom.setCapacity(request.getCapacity());
         classRoom.setRoomNumber(request.getRoomNumber());
         classRoom.setClassTeacher(teacher);

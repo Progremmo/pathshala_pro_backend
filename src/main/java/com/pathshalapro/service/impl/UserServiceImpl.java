@@ -67,7 +67,29 @@ public class UserServiceImpl implements UserService {
         if (request.getClassRoomId() != null) {
             ClassRoom classRoom = classRoomRepository.findByIdAndIsDeletedFalse(request.getClassRoomId())
                     .orElseThrow(() -> ApiException.notFound("Classroom not found"));
-            user.setClassRoom(classRoom);
+            
+            String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+            if (user.getClassAllocations() == null) {
+                user.setClassAllocations(new java.util.ArrayList<>());
+            }
+            
+            boolean allocationExists = user.getClassAllocations().stream()
+                .anyMatch(a -> a.getAcademicYear().equals(currentAcademicYear));
+                
+            if (!allocationExists) {
+                com.pathshalapro.entity.StudentClassAllocation allocation = com.pathshalapro.entity.StudentClassAllocation.builder()
+                    .student(user)
+                    .classRoom(classRoom)
+                    .academicYear(currentAcademicYear)
+                    .school(user.getSchool())
+                    .build();
+                user.getClassAllocations().add(allocation);
+            } else {
+                user.getClassAllocations().stream()
+                    .filter(a -> a.getAcademicYear().equals(currentAcademicYear))
+                    .findFirst()
+                    .ifPresent(a -> a.setClassRoom(classRoom));
+            }
         }
 
         if (request.getAdmissionNo() != null) user.setAdmissionNo(request.getAdmissionNo());
@@ -95,7 +117,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public java.util.List<UserResponse> getStudentsByClass(Long classRoomId) {
-        return userRepository.findStudentsByClassRoomId(classRoomId)
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        return userRepository.findStudentsByClassRoomIdAndAcademicYear(classRoomId, currentAcademicYear)
                 .stream()
                 .map(this::mapToUserResponse)
                 .collect(Collectors.toList());
@@ -110,6 +133,12 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToUserResponse(User user) {
+        String currentAcademicYear = com.pathshalapro.config.AcademicYearContextHolder.get();
+        ClassRoom currentClass = user.getClassAllocations() == null ? null : user.getClassAllocations().stream()
+                .filter(a -> a.getAcademicYear().equals(currentAcademicYear))
+                .map(com.pathshalapro.entity.StudentClassAllocation::getClassRoom)
+                .findFirst().orElse(null);
+
         return UserResponse.builder()
                 .id(user.getId())
                 .firstName(user.getFirstName())
@@ -130,8 +159,8 @@ public class UserServiceImpl implements UserService {
                 .roles(user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList()))
                 .schoolId(user.getSchool() != null ? user.getSchool().getId() : null)
                 .schoolName(user.getSchool() != null ? user.getSchool().getName() : null)
-                .classRoomId(user.getClassRoom() != null ? user.getClassRoom().getId() : null)
-                .classRoomName(user.getClassRoom() != null ? user.getClassRoom().getName() : null)
+                .classRoomId(currentClass != null ? currentClass.getId() : null)
+                .classRoomName(currentClass != null ? currentClass.getName() : null)
                 .parentId(user.getParent() != null ? user.getParent().getId() : null)
                 .parentName(user.getParent() != null ? (user.getParent().getFirstName() + " " + user.getParent().getLastName()) : null)
                 .createdAt(user.getCreatedAt())

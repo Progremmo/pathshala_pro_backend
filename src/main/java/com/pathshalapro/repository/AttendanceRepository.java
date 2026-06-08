@@ -43,9 +43,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                                              @Param("endDate") LocalDate endDate);
 
     // School-level attendance for a day
-    List<Attendance> findBySchoolIdAndAttendanceDateAndIsDeletedFalse(Long schoolId, LocalDate date);
+    List<Attendance> findBySchoolIdAndAcademicYearAndAttendanceDateAndIsDeletedFalse(Long schoolId, String academicYear, LocalDate date);
 
     Page<Attendance> findByStudentIdAndIsDeletedFalse(Long studentId, Pageable pageable);
+
+    Page<Attendance> findByStudentIdAndAcademicYearAndIsDeletedFalse(Long studentId, String academicYear, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM Attendance a WHERE a.student.id = :studentId AND a.isDeleted = false AND " +
            "a.attendanceDate BETWEEN :startDate AND :endDate")
@@ -58,7 +60,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Query("SELECT COUNT(a) FROM Attendance a WHERE a.school.id = :schoolId AND a.attendanceDate = :date AND a.isDeleted = false")
     long countBySchoolIdAndDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
 
-    long countByStudentIdAndIsDeletedFalse(Long studentId);
+    long countByStudentIdAndAcademicYearAndIsDeletedFalse(Long studentId, String academicYear);
 
     boolean existsByClassRoomIdAndAttendanceDateAndIsDeletedFalse(Long classRoomId, LocalDate date);
 }

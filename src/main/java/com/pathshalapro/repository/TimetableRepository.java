@@ -17,6 +17,8 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     List<Timetable> findByTeacherIdAndAcademicYearAndIsDeletedFalse(Long teacherId, String academicYear);
 
+    List<Timetable> findBySchoolIdAndAcademicYearAndDayOfWeekAndIsDeletedFalse(Long schoolId, String academicYear, DayOfWeek dayOfWeek);
+    
     List<Timetable> findBySchoolIdAndDayOfWeekAndIsDeletedFalse(Long schoolId, DayOfWeek dayOfWeek);
 
     List<Timetable> findByTeacherIdAndDayOfWeekAndAcademicYearAndIsDeletedFalse(Long teacherId, DayOfWeek dayOfWeek, String academicYear);

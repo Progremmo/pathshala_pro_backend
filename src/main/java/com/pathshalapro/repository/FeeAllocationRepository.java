@@ -7,7 +7,7 @@ import java.util.List;
 
 @Repository
 public interface FeeAllocationRepository extends JpaRepository<FeeAllocation, Long> {
-    List<FeeAllocation> findBySchoolIdAndIsDeletedFalse(Long schoolId);
+    List<FeeAllocation> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear);
     List<FeeAllocation> findByClassRoomIdAndAcademicYearAndIsDeletedFalse(Long classRoomId, String academicYear);
     List<FeeAllocation> findByStudentIdAndAcademicYearAndIsDeletedFalse(Long studentId, String academicYear);
 }

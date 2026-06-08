@@ -53,7 +53,7 @@ public class FeeInvoice extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", nullable = false, length = 20)
+    @Column(name = "payment_status", length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Column(name = "due_date", nullable = false)

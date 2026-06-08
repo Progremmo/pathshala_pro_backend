@@ -308,7 +308,16 @@ public class DataSeeder {
     }
 
     private void assignStudentToClass(User student, ClassRoom classRoom) {
-        student.setClassRoom(classRoom);
+        if (student.getClassAllocations() == null) {
+            student.setClassAllocations(new java.util.ArrayList<>());
+        }
+        StudentClassAllocation allocation = StudentClassAllocation.builder()
+                .student(student)
+                .classRoom(classRoom)
+                .academicYear(classRoom.getAcademicYear())
+                .school(student.getSchool())
+                .build();
+        student.getClassAllocations().add(allocation);
         userRepository.save(student);
         log.info("Assigned student {} to class {} ({})", student.getEmail(), classRoom.getName(), classRoom.getAcademicYear());
     }
@@ -324,6 +333,7 @@ public class DataSeeder {
                     .classRoom(classRoom)
                     .attendanceDate(date)
                     .status(status)
+                    .academicYear(classRoom.getAcademicYear())
                     .build();
             attendanceRepository.save(attendance);
             date = date.plusDays(1);
@@ -758,6 +768,7 @@ public class DataSeeder {
                                 .student(student)
                                 .marksObtained(marksObtained)
                                 .remarks(remarks)
+                                .academicYear(exam.getAcademicYear())
                                 .build());
                         log.info("Seeded Marks for {}: {} - {}", student.getEmail(), examName, marksObtained);
                     }

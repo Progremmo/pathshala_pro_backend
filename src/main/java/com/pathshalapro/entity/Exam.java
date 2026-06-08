@@ -51,7 +51,7 @@ public class Exam extends BaseEntity {
     @Column(name = "passing_marks", nullable = false)
     private Double passingMarks;
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear;
 
     @Column(name = "instructions", columnDefinition = "TEXT")

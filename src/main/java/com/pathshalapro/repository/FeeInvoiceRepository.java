@@ -20,9 +20,11 @@ public interface FeeInvoiceRepository extends JpaRepository<FeeInvoice, Long> {
 
     Optional<FeeInvoice> findByInvoiceNumberAndIsDeletedFalse(String invoiceNumber);
 
-    Page<FeeInvoice> findBySchoolIdAndIsDeletedFalse(Long schoolId, Pageable pageable);
+    Page<FeeInvoice> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear, Pageable pageable);
 
     Page<FeeInvoice> findByStudentIdAndIsDeletedFalse(Long studentId, Pageable pageable);
+
+    Page<FeeInvoice> findByStudentIdAndAcademicYearAndIsDeletedFalse(Long studentId, String academicYear, Pageable pageable);
     
     List<FeeInvoice> findBySchoolIdAndAcademicYearAndIsDeletedFalse(Long schoolId, String academicYear);
 

@@ -41,7 +41,7 @@ public class Timetable extends BaseEntity {
     @Column(name = "period_number")
     private Integer periodNumber;
 
-    @Column(name = "academic_year", nullable = false, length = 20)
+    @Column(name = "academic_year", length = 20)
     private String academicYear;
 
     @ManyToOne(fetch = FetchType.LAZY)

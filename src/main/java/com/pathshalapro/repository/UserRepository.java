@@ -37,8 +37,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllBySchoolIdAndRoleName(@Param("schoolId") Long schoolId,
                                              @Param("roleName") com.pathshalapro.entity.enums.RoleName roleName);
 
-    @Query("SELECT u FROM User u WHERE u.classRoom.id = :classRoomId AND u.isDeleted = false")
-    List<User> findStudentsByClassRoomId(@Param("classRoomId") Long classRoomId);
+    @Query("SELECT sca.student FROM StudentClassAllocation sca WHERE sca.classRoom.id = :classRoomId AND sca.academicYear = :academicYear AND sca.student.isDeleted = false")
+    List<User> findStudentsByClassRoomIdAndAcademicYear(@Param("classRoomId") Long classRoomId, @Param("academicYear") String academicYear);
 
     @Query("SELECT u FROM User u WHERE u.parent.id = :parentId AND u.isDeleted = false")
     List<User> findChildrenByParentId(@Param("parentId") Long parentId);

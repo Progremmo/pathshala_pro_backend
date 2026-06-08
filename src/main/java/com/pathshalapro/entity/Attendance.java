@@ -41,6 +41,9 @@ public class Attendance extends BaseEntity {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    @Column(name = "academic_year", length = 20)
+    private String academicYear;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
