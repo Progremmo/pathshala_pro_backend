@@ -57,8 +57,8 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final ClassRoomRepository classRoomRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${app.server-url}")
-    private String serverUrl;
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Override
     @Transactional
@@ -175,7 +175,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("User registered successfully: {}", saved.getId());
 
         // Send confirmation email
-        String loginUrl = serverUrl + "/login";
+        String loginUrl = frontendUrl + "/login";
         String subject = "Welcome to PathshalaPro - Registration Successful";
         String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword,
                 loginUrl);
@@ -236,7 +236,7 @@ public class AuthServiceImpl implements AuthService {
         User saved = userRepository.save(user);
 
         // Send email
-        String loginUrl = serverUrl + "/login";
+        String loginUrl = frontendUrl + "/login";
         String subject = "Welcome to PathshalaPro - Admin Credentials";
         String htmlBody = getRegistrationHtmlTemplate(request.getFirstName(), request.getEmail(), plainPassword,
                 loginUrl);
